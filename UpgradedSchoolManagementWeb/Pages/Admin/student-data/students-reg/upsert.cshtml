@@ -1,0 +1,212 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg.upsertModel
+@{
+    ViewData["Title"] = Model.termReg.Id > 0 ? "Edit Termly Registration" : "New Termly Registration";
+}
+@section Sheets {
+    <link href="~/lib/multiple-select/multiple-select.min.css" rel="stylesheet" />
+    <link href="~/lib/jquery-multiselect-master/jquery.multiselect.css" rel="stylesheet" />
+}
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-person-add me-2" style="color:var(--accent)"></i>Termly Registration</div>
+            <div class="mgmt-sub">Manage students term registrations</div>
+        </div>
+        <div class="btn-group" role="group">
+            <a asp-page="index" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-2"></i> Back</a>
+        </div>
+    </div>
+
+
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="page-content">
+        <div class="row">
+            <div class="col-md-6 offset-md-6">
+                <form method="post" asp-page-handler="Search">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="termregnumber" required placeholder="Student Registration Number">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-search"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @if (Model.termReg.StudentId > 0)
+        {
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="h3 text-dark"> Student Term Registration Form</div>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" asp-page-handler="Register">
+                                <div class="mb-3">
+                                    <label asp-for="termReg.StudentName" class="form-label">Full Name</label>
+                                    <input type="text" asp-for="termReg.StudentRegNumber" class="form-control" readonly placeholder="Full Name">
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="termReg.StudentName" class="form-label">Student Registration Number</label>
+                                    <input type="text" asp-for="termReg.StudentName" class="form-control" placeholder="GIS/BN/001" readonly>
+                                </div>
+                                <div class="row">
+                                    <label asp-for="termReg.SubjectsId" class="form-label col-12">Subjects</label>
+                                    <div class="col-12">
+                                        <select class="form-control ms-dropdown ms-dropdown-divider"  asp-for="termReg.SubjectsId" name="termReg.SubjectsId[]" asp-items="@Model.SelectionViewModal.Subjects">
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="termReg.Term" class="form-label">Term</label>
+                                    <select class="form-select" asp-for="termReg.Term" asp-items="@Model.SelectionViewModal.Terms">
+                                        <option disabled selected>---Select Term---</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="termReg.SessionId" class="form-label">Academic Session</label>
+                                    <select class="form-select" asp-for="termReg.SessionId" asp-items="@Model.SelectionViewModal.AcademicSession">
+                                        <option disabled selected>---Select Session---</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="termReg.SchoolClassId" class="form-label">Class</label>
+                                    <select class="form-select" asp-for="termReg.SchoolClassId" asp-items="@Model.SelectionViewModal.SchoolClasses">
+                                        <option disabled selected>---Select Class---</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="termReg.SchoolSubclassId" class="form-label">Sub Class</label>
+                                    <select class="form-select" asp-for="termReg.SchoolSubclassId" asp-items="@Model.SelectionViewModal.SubClass">
+                                        <option disabled selected>---Select Sub Class---</option>
+                                    </select>
+                                </div>
+                                <input type="hidden" asp-for="termReg.Id" />
+                                <input type="hidden" asp-for="termReg.StudentId" />
+
+                                @if (Model.termReg.Id > 0 && Model.termReg.RegisteredSubjects != null && Model.termReg.RegisteredSubjects.Any())
+                                {
+                                    <div class="mt-4 mb-4">
+                                        <h5 class="text-secondary"><i class="bi bi-book me-2"></i>Registered Subjects</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-striped table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Subject Name</th>
+                                                        <th class="text-center" style="width: 150px;">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var sub in Model.termReg.RegisteredSubjects)
+                                                    {
+                                                        <tr id="subject-row-@sub.ResultTableId">
+                                                            <td>@sub.SubjectName</td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete @sub.SubjectName from this list" onclick="removeSubject(@sub.ResultTableId, @sub.HasRecordedResults.ToString().ToLower())">
+                                                                    <i class="bi bi-trash"></i> Remove
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary ">@(Model.termReg.Id > 0 ? "Update" : "Register")</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/multiple-select/multiple-select.min.js"></script>
+    <script src="~/lib/jquery-multiselect-master/jquery.multiselect.js"></script>
+    <script>
+        //Configure the multiple select plugin
+        // $('#termReg_SubjectsId').multipleSelect({
+        //     displayDelimiter: ' | ',
+        //     displayTitle: true,
+        //     openOnHover: true,
+        //     placeholder: '--- Select subject(s) ---'
+        // });
+
+        $(function () {
+            $('#termReg_SubjectsId').multiselect({
+                columns: 2,
+                placeholder: 'Select Subjects',
+                search: true,
+                searchOptions: {
+                    'default': 'Search Subject'
+                },
+                selectAll: true
+            });
+        });
+
+        function removeSubject(resultTableId, hasResults) {
+            if (hasResults) {
+                Swal.fire({
+                    title: 'Cannot Remove',
+                    text: 'Results have already been recorded for this subject.',
+                    icon: 'error'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Remove Subject?',
+                text: 'Are you sure you want to permanently delete this subject from this registration?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, remove it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/RemoveRegisteredSubject',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ ResultTableId: resultTableId }),
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Removed!', res.message, 'success');
+                                $('#subject-row-' + resultTableId).fadeOut(300, function() { $(this).remove(); });
+                            } else {
+                                Swal.fire('Cannot Remove', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error', 'An error occurred while removing the subject.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

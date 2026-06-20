@@ -1,0 +1,487 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments.MakeModel
+@{
+    ViewData["Title"] = Model.EditPaymentId.HasValue ? "Edit Payment" : "New Payment";
+    var isEdit = Model.EditPaymentId.HasValue;
+}
+
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            @if (isEdit)
+            {
+                <div class="mgmt-title"><i class="bi bi-pencil me-2" style="color:var(--accent)"></i>Edit Payment</div>
+                <div class="mgmt-sub">Update the amount and narration for an existing payment</div>
+            }
+            else
+            {
+                <div class="mgmt-title"><i class="bi bi-cash-stack me-2" style="color:var(--accent)"></i>Record Payment</div>
+                <div class="mgmt-sub">Look up a student by session, term, payment item, and admission number</div>
+            }
+        </div>
+        <a asp-page="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Payments
+        </a>
+    </div>
+
+    @if (isEdit)
+    {
+        <div class="alert alert-info fade-in">
+            <i class="bi bi-info-circle me-1"></i>
+            You are editing payment <strong>#@Model.EditPaymentId</strong>. The lookup is pre-filled based on the existing payment data.
+        </div>
+    }
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-search me-2" style="color:var(--accent2)"></i>Find Student</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <form id="lookupForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Academic Session <span class="text-danger">*</span></label>
+                    <select class="form-select" id="sessionId" required asp-items="@Model.SelectionView.AcademicSession">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Term <span class="text-danger">*</span></label>
+                    <select class="form-select" id="termId" required asp-items="@Model.SelectionView.Terms">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Payment Item <span class="text-danger">*</span></label>
+                    <select class="form-select" id="paymentItemId" required asp-items="@Model.SelectionView.PaymentItems">
+                        <option value="">-- Select --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Admission Number <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="admissionNo" placeholder="e.g. EDU/STD/2024/0001" required />
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100" id="lookupBtn">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <input type="hidden" id="editPaymentId" value="@(Model.EditPaymentId?.ToString() ?? "")" />
+    <input type="hidden" id="editPaymentDataJson" value='@(isEdit ? Model.EditPaymentDataJson : "")' />
+
+    <!-- Student Info Card (hidden initially) -->
+    <div id="studentInfoCard" class="mgmt-card fade-in" style="display:none">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-person-vcard me-2" style="color:var(--accent2)"></i>Student Information</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="row g-3">
+                <div class="col-md-3"><strong>Name:</strong> <span id="dispName"></span></div>
+                <div class="col-md-3"><strong>Admission No:</strong> <span id="dispAdmission"></span></div>
+                <div class="col-md-3"><strong>Class:</strong> <span id="dispClass"></span></div>
+                <div class="col-md-3"><strong>Session/Term:</strong> <span id="dispSessionTerm"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Item Summary Card (hidden initially) -->
+    <div id="itemSummaryCard" class="mgmt-card fade-in" style="display:none">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-receipt me-2" style="color:var(--accent2)"></i>Payment Item Summary</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="row g-3">
+                <div class="col-md-3"><strong>Item:</strong> <span id="dispItemName"></span></div>
+                <div class="col-md-3"><strong>Category:</strong> <span id="dispCategoryName"></span></div>
+                <div class="col-md-2"><strong>Total Due:</strong> <span id="dispTotalDue"></span></div>
+                <div class="col-md-2"><strong>Total Paid:</strong> <span id="dispTotalPaid"></span></div>
+                <div class="col-md-2"><strong>Outstanding:</strong> <span id="dispOutstanding"></span></div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <strong>Status:</strong> <span id="dispStatusBadge"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment History Card (hidden initially) -->
+    <div id="historyCard" class="mgmt-card fade-in" style="display:none">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-clock-history me-2" style="color:var(--accent2)"></i>Payment History</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Date</th>
+                            <th>Amount Paid</th>
+                            <th>Recorded By</th>
+                            <th>Status</th>
+                            <th>State</th>
+                            <th>Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+            <div id="noHistoryMsg" class="text-muted text-center py-3">No previous payments recorded for this item.</div>
+        </div>
+    </div>
+
+    <!-- Payment Entry Card (hidden initially) -->
+    <div id="paymentEntryCard" class="mgmt-card fade-in" style="display:none">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-cash me-2" style="color:var(--accent2)"></i>
+                @(isEdit ? "Update Payment" : "Record Payment")
+            </h6>
+        </div>
+        <div class="mgmt-card-body">
+            <form id="paymentForm">
+                <input type="hidden" id="termRegId" value="" />
+                <input type="hidden" id="paymentItemId" value="" />
+                <input type="hidden" id="maxOutstanding" value="" />
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Amount to Pay <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8358;</span>
+                            <input type="number" class="form-control" id="amountInput" min="0.01" step="0.01" placeholder="0.00" required />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Remaining After Payment</label>
+                        <div class="input-group">
+                            <span class="input-group-text">&#8358;</span>
+                            <input type="text" class="form-control" id="remainingDisplay" value="" readonly />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Narration (optional)</label>
+                        <textarea class="form-control" id="narration" rows="1" maxlength="120" placeholder="Payment notes..."></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-success px-4" id="submitPaymentBtn">
+                        <i class="bi bi-check2-circle me-1"></i> @(isEdit ? "Save Changes" : "Record Payment")
+                    </button>
+                    <button type="button" class="btn btn-secondary px-4" onclick="resetForm()">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        let currentData = null;
+        let termRegId = 0;
+        let isEditMode = $('#editPaymentId').val() !== '';
+
+        function resetForm() {
+            if (isEditMode) return;
+            $('#studentInfoCard, #itemSummaryCard, #historyCard, #paymentEntryCard').hide();
+            $('#lookupForm')[0].reset();
+            currentData = null;
+            termRegId = 0;
+        }
+
+        function formatMoney(amount) {
+            return '₦' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function updateRemaining() {
+            var maxVal = parseFloat($('#maxOutstanding').val()) || 0;
+            var entered = parseFloat($('#amountInput').val()) || 0;
+            var remaining = Math.max(0, maxVal - entered);
+            $('#remainingDisplay').val(remaining.toFixed(2));
+        }
+
+        function buildLookupPayload() {
+            return {
+                SessionId: parseInt($('#sessionId').val()),
+                Term: parseInt($('#termId').val()),
+                PaymentItemId: parseInt($('#paymentItemId').val()),
+                AdmissionNo: $('#admissionNo').val().trim()
+            };
+        }
+
+        function doLookup(payload) {
+            $('#lookupBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+            $.ajax({
+                url: '/V1/LookupByItem',
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success && r.data) {
+                        currentData = r.data;
+                        termRegId = r.data.termRegistrationId;
+                        displayResult(r.data);
+                    } else {
+                        Swal.fire('Not Found', r.message || 'No matching record found.', 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred during lookup.', 'error');
+                },
+                complete: function () {
+                    $('#lookupBtn').prop('disabled', false).html('<i class="bi bi-search"></i>');
+                }
+            });
+        }
+
+        function submitCreatePayment(amount, maxVal) {
+            var payload = {
+                TermRegistrationId: parseInt($('#termRegId').val()),
+                PaymentItemId: parseInt($('#paymentItemId').val()),
+                AmountPaid: amount,
+                Narration: $('#narration').val().trim() || null
+            };
+
+            $('#submitPaymentBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Processing...');
+
+            $.ajax({
+                url: '/V1/CreateSingleItemPayment',
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({
+                            icon: 'success', title: 'Payment Recorded', text: r.message,
+                            timer: 2000, showConfirmButton: false
+                        }).then(function () {
+                            window.location.href = '/Admin/Finance/Payments/Detail?id=' + r.data;
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred while recording payment.', 'error');
+                },
+                complete: function () {
+                    $('#submitPaymentBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> Record Payment');
+                }
+            });
+        }
+
+        function submitUpdatePayment(amount) {
+            var editId = $('#editPaymentId').val();
+            var payload = {
+                PaymentId: parseInt(editId),
+                NewAmount: amount,
+                Narration: $('#narration').val().trim() || null
+            };
+
+            $('#submitPaymentBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+
+            $.ajax({
+                url: '/V1/UpdatePaymentAmount',
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({
+                            icon: 'success', title: 'Payment Updated', text: r.message,
+                            timer: 2000, showConfirmButton: false
+                        }).then(function () {
+                            window.location.href = '/Admin/Finance/Payments/Detail?id=' + editId;
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred while updating payment.', 'error');
+                },
+                complete: function () {
+                    $('#submitPaymentBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> Save Changes');
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            $('#amountInput').on('input', updateRemaining);
+
+            // ── EDIT MODE: auto-load from server-provided data ──
+            if (isEditMode) {
+                var json = $('#editPaymentDataJson').val();
+                if (json) {
+                    try {
+                        var detail = JSON.parse(json);
+                        // Pre-fill lookup fields from payment detail
+                        if (detail.lineItems && detail.lineItems.length > 0) {
+                            $('#paymentItemId').val(detail.lineItems[0].paymentItemId);
+                        }
+                        $('#sessionId').val(detail.sessionId);
+                        $('#termId').val(detail.term);
+                        $('#admissionNo').val(detail.admissionNo);
+
+                        // Auto-submit lookup
+                        var payload = buildLookupPayload();
+                        if (payload.SessionId && payload.Term && payload.PaymentItemId && payload.AdmissionNo) {
+                            doLookup(payload);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse edit payment data', e);
+                    }
+                }
+                return;
+            }
+
+            // ── CREATE MODE: manual lookup ──
+            $('#lookupForm').on('submit', function (e) {
+                e.preventDefault();
+
+                var payload = buildLookupPayload();
+
+                if (!payload.SessionId || !payload.Term || !payload.PaymentItemId || !payload.AdmissionNo) {
+                    Swal.fire('Validation Error', 'Please fill all lookup fields.', 'warning');
+                    return;
+                }
+
+                doLookup(payload);
+            });
+
+            // ── CREATE MODE: payment form submit ──
+            $('#paymentForm').on('submit', function (e) {
+                e.preventDefault();
+
+                var amount = parseFloat($('#amountInput').val()) || 0;
+                var maxVal = parseFloat($('#maxOutstanding').val()) || 0;
+
+                if (amount <= 0) {
+                    Swal.fire('Invalid Amount', 'Please enter an amount greater than zero.', 'warning');
+                    return;
+                }
+
+                if (amount > maxVal) {
+                    Swal.fire('Overpayment', 'Amount exceeds outstanding balance of ' + formatMoney(maxVal), 'error');
+                    return;
+                }
+
+                submitCreatePayment(amount, maxVal);
+            });
+        });
+
+        function displayResult(data) {
+            // Student info
+            $('#dispName').text(data.studentName);
+            $('#dispAdmission').text(data.admissionNo);
+            $('#dispClass').text(data.className);
+            $('#dispSessionTerm').text(data.sessionName + ' - ' + data.termName);
+            $('#studentInfoCard').show();
+
+            // Item summary
+            $('#dispItemName').text(data.itemName);
+            $('#dispCategoryName').text(data.categoryName);
+            $('#dispTotalDue').text(formatMoney(data.balance.totalDue));
+            $('#dispTotalPaid').text(formatMoney(data.balance.totalPaid));
+            $('#dispOutstanding').text(formatMoney(data.balance.outstanding));
+
+            var badgeClass = 'bg-secondary';
+            if (data.balance.paymentStatusLabel === 'Fully Paid') badgeClass = 'bg-success';
+            else if (data.balance.paymentStatusLabel === 'Partially Paid') badgeClass = 'bg-warning text-dark';
+
+            $('#dispStatusBadge').html('<span class="badge ' + badgeClass + '">' + data.balance.paymentStatusLabel + '</span>');
+            $('#itemSummaryCard').show();
+
+            // Payment history
+            var tbody = $('#historyBody');
+            tbody.empty();
+            if (data.history && data.history.length > 0) {
+                $('#noHistoryMsg').hide();
+                data.history.forEach(function (row) {
+                    var stateBadge = row.state === 'Approved' ? 'bg-success' :
+                                     row.state === 'Pending' ? 'bg-warning text-dark' :
+                                     row.state === 'Rejected' ? 'bg-danger' : 'bg-secondary';
+                    var statusBadge = row.status === 'Completed' ? 'bg-success' :
+                                      row.status === 'Pending' ? 'bg-warning text-dark' :
+                                      row.status === 'Failed' ? 'bg-danger' : 'bg-secondary';
+                    tbody.append('<tr>' +
+                        '<td>' + row.reference + '</td>' +
+                        '<td>' + new Date(row.paymentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+                        '<td>' + formatMoney(row.amountPaid) + '</td>' +
+                        '<td>' + (row.recordedBy || '-') + '</td>' +
+                        '<td><span class="badge ' + statusBadge + '">' + row.status + '</span></td>' +
+                        '<td><span class="badge ' + stateBadge + '">' + row.state + '</span></td>' +
+                        '<td>' + formatMoney(row.runningBalance) + '</td>' +
+                        '</tr>');
+                });
+            } else {
+                $('#noHistoryMsg').show();
+            }
+            $('#historyCard').show();
+
+            // Payment entry
+            $('#termRegId').val(data.termRegistrationId);
+            $('#paymentItemId').val(data.paymentItemId);
+            $('#maxOutstanding').val(data.balance.outstanding);
+
+            // Pre-fill existing amount in edit mode
+            if (isEditMode) {
+                var json = $('#editPaymentDataJson').val();
+                if (json) {
+                    try {
+                        var detail = JSON.parse(json);
+                        $('#amountInput').val(parseFloat(detail.totalAmount).toFixed(2) || '');
+                        $('#narration').val(detail.narration || '');
+                    } catch (e) {}
+                }
+            } else {
+                $('#amountInput').val('');
+                $('#narration').val('');
+            }
+
+            updateRemaining();
+
+            if (data.balance.outstanding <= 0) {
+                $('#amountInput').prop('disabled', true);
+                $('#submitPaymentBtn').prop('disabled', true);
+                $('#paymentEntryCard .alert').remove();
+                $('#paymentEntryCard .mgmt-card-body').prepend('<div class="alert alert-success mb-3"><i class="bi bi-check-circle-fill me-1"></i> This item is fully paid. No further payment is required.</div>');
+            } else {
+                $('#amountInput').prop('disabled', false);
+                $('#submitPaymentBtn').prop('disabled', false);
+                $('#amountInput').attr('max', data.balance.outstanding);
+                $('#paymentEntryCard .alert').remove();
+
+                // In edit mode, wire up the form to update instead of create
+                if (isEditMode) {
+                    $('#paymentForm').off('submit').on('submit', function (e) {
+                        e.preventDefault();
+
+                        var amount = parseFloat($('#amountInput').val()) || 0;
+
+                        if (amount <= 0) {
+                            Swal.fire('Invalid Amount', 'Please enter an amount greater than zero.', 'warning');
+                            return;
+                        }
+
+                        submitUpdatePayment(amount);
+                    });
+                }
+            }
+
+            $('#paymentEntryCard').show();
+        }
+    </script>
+}

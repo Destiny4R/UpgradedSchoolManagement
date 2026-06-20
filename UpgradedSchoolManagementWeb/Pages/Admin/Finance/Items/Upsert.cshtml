@@ -1,0 +1,117 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Items.UpsertModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Payment Item" : "Add Payment Item";
+    var item = Model.Item;
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi @(Model.IsEdit ? "bi-pencil-square" : "bi-plus-circle-fill") me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">@(Model.IsEdit ? "Update payment item details" : "Create a new payment item")</div>
+        </div>
+        <a asp-page="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form id="itemForm">
+                <input type="hidden" id="itemId" value="@(item?.Id ?? 0)" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select" id="categoryId" required>
+                            <option value="">-- Select Category --</option>
+                            @foreach (var cat in Model.Categories)
+                            {
+                                <option value="@cat.Id" selected="@(item != null && item.CategoryId == cat.Id)">
+                                    @cat.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="isActive" name="IsActive">
+                            <option value="true" selected="@(item == null || item.IsActive)">Active</option>
+                            <option value="false" selected="@(item != null && !item.IsActive)">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Item Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" value="@(item?.Name)" placeholder="e.g. Tuition, Development Levy" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="Optional description">@(item?.Description)</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                        <i class="bi bi-check2-circle me-1"></i> @(Model.IsEdit ? "Update Item" : "Save Item")
+                    </button>
+                    <a asp-page="Index" class="btn btn-secondary px-4">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        const isEdit = @(Model.IsEdit ? "true" : "false");
+
+        $('#itemForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const payload = {
+                CategoryId: parseInt($('#categoryId').val()),
+                Name: $('#name').val().trim(),
+                Description: $('#description').val().trim() || null,
+                IsActive: $('#isActive').val() === 'true'
+            };
+
+            const url = isEdit
+                ? '/V1/UpdatePaymentItem'
+                : '/V1/CreatePaymentItem';
+
+            if (isEdit) payload.Id = parseInt($('#itemId').val());
+
+            $('#submitBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({
+                            icon: 'success', title: 'Success', text: r.message,
+                            timer: 1800, showConfirmButton: false
+                        }).then(function () {
+                            window.location.href = '/Admin/Finance/Items/Index';
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                        $('#submitBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> ' + (isEdit ? 'Update Item' : 'Save Item'));
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred. Please try again.', 'error');
+                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> ' + (isEdit ? 'Update Item' : 'Save Item'));
+                }
+            });
+        });
+    </script>
+}

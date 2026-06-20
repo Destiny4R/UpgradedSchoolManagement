@@ -1,0 +1,235 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Reports.ClassReportModel
+@{
+    ViewData["Title"] = "Class Collection Report";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-file-earmark-bar-graph me-2" style="color:var(--accent)"></i>Class Collection Report</div>
+            <div class="mgmt-sub">Per-student fee collection summary for a class</div>
+        </div>
+        <a asp-page="/Admin/Finance/Payments/Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6><i class="bi bi-funnel me-2" style="color:var(--accent2)"></i>Filter Report</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <form id="filterForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Session <span class="text-danger">*</span></label>
+                    <select id="sessionId" class="form-select" required>
+                        <option value="">-- Select Session --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Term <span class="text-danger">*</span></label>
+                    <select id="termId" class="form-select" required>
+                        <option value="">-- Select Term --</option>
+                        <option value="1">First Term</option>
+                        <option value="2">Second Term</option>
+                        <option value="3">Third Term</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Class <span class="text-danger">*</span></label>
+                    <select id="classId" class="form-select" required>
+                        <option value="">-- Select Class --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn-mgmt-primary w-100" id="generateBtn">
+                        <i class="bi bi-search me-1"></i> Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reportSection" class="mgmt-card fade-in mt-4" style="display:none">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>Collection Summary - <span id="reportTitle">--</span></h6>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="exportTableToCSV()">
+                    <i class="bi bi-download me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="reportTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Admission No</th>
+                            <th>Student Name</th>
+                            <th class="text-end">Total Expected</th>
+                            <th class="text-end">Total Paid</th>
+                            <th class="text-end">Outstanding</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="3" class="text-end">Totals</td>
+                            <td class="text-end" id="totalExpected">0.00</td>
+                            <td class="text-end" id="totalPaid">0.00</td>
+                            <td class="text-end" id="totalOutstanding">0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let reportTable;
+
+        function loadFilters() {
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ draw: 1, start: 0, length: 1000, search: { value: '', regex: false }, order: [{ column: 0, dir: 'asc' }], columns: [] }),
+                success: function (r) {
+                    var sel = $('#sessionId');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+
+            $.get('/Home/GetAllClasses', function (data) {
+                var sel = $('#classId');
+                if (data && Array.isArray(data)) {
+                    data.forEach(function (c) {
+                        sel.append('<option value="' + c.id + '">' + c.name + '</option>');
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+
+            $('#filterForm').on('submit', function (e) {
+                e.preventDefault();
+
+                var sessionId = parseInt($('#sessionId').val());
+                var termId = parseInt($('#termId').val());
+                var classId = parseInt($('#classId').val());
+
+                if (!sessionId || !termId || !classId) {
+                    Swal.fire('Validation', 'Please select session, term, and class.', 'warning');
+                    return;
+                }
+
+                $('#generateBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Loading...');
+
+                $.ajax({
+                    url: '/Home/GetClassReport',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ SessionId: sessionId, TermId: termId, ClassId: classId }),
+                    success: function (r) {
+                        var data = r.data || r;
+                        if (data && Array.isArray(data)) {
+                            renderReport(data, sessionId, termId, classId);
+                        } else {
+                            Swal.fire('No Data', 'No records found for the selected filters.', 'info');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Failed to generate report.', 'error');
+                    },
+                    complete: function () {
+                        $('#generateBtn').prop('disabled', false).html('<i class="bi bi-search me-1"></i> Generate Report');
+                    }
+                });
+            });
+        });
+
+        function renderReport(data, sessionId, termId, classId) {
+            if (reportTable) {
+                reportTable.destroy();
+                $('#reportTable tbody').empty();
+            }
+
+            $('#reportTitle').text('Session ' + sessionId + ', Term ' + termId + ', Class ' + classId);
+            $('#reportSection').show();
+
+            var totExp = 0, totPaid = 0, totOut = 0;
+            var tbody = $('#reportTable tbody');
+            tbody.empty();
+
+            data.forEach(function (row, i) {
+                var expected = parseFloat(row.totalExpected) || 0;
+                var paid = parseFloat(row.totalPaid) || 0;
+                var outstanding = expected - paid;
+                totExp += expected;
+                totPaid += paid;
+                totOut += outstanding;
+
+                var statusClass = outstanding <= 0 ? 'success' : 'warning text-dark';
+                var statusText = outstanding <= 0 ? 'Cleared' : 'Outstanding';
+
+                tbody.append('<tr>' +
+                    '<td>' + (i + 1) + '</td>' +
+                    '<td>' + (row.admissionNo || '--') + '</td>' +
+                    '<td>' + (row.studentName || '--') + '</td>' +
+                    '<td class="text-end">' + expected.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-end">' + paid.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-end">' + outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-center"><span class="badge bg-' + statusClass + '">' + statusText + '</span></td>' +
+                    '</tr>');
+            });
+
+            $('#totalExpected').text(totExp.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#totalPaid').text(totPaid.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#totalOutstanding').text(totOut.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+
+            reportTable = $('#reportTable').DataTable({
+                ordering: true,
+                order: [[2, 'asc']],
+                pageLength: 25,
+                dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip'
+            });
+        }
+
+        function exportTableToCSV() {
+            var csv = [];
+            var rows = document.querySelectorAll('#reportTable tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll('td, th');
+                for (var j = 0; j < cols.length; j++) {
+                    row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+                }
+                csv.push(row.join(','));
+            }
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ClassReport_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+}

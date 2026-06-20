@@ -1,0 +1,288 @@
+@page
+@using System.Text.Json
+@model UpgradedSchoolManagementWeb.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "Manage Users";
+}
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-people-fill me-2" style="color:var(--accent)"></i>Users</div>
+            <div class="mgmt-sub">Manage system users and role assignments</div>
+        </div>
+        @if (Model.CanCreate)
+        {
+            <a class="btn btn-primary btn-sm" href="/Admin/employee-data/employees/upsert">
+                <i class="bi bi-plus-lg"></i> Add Employee
+            </a>
+        }
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Users</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="usersTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Username</th>
+                            <th>Roles</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header new-bg-background text-white">
+                <h5 class="modal-title" id="resetPasswordModalLabel">
+                    <i class="bi bi-key me-2"></i>Reset User Password
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetUserId" value="" />
+                <div class="mb-3">
+                    <label class="form-label">User</label>
+                    <p class="form-control-plaintext fw-bold" id="resetUserName"></p>
+                </div>
+                <div class="mb-3">
+                    <label for="newPassword" class="form-label">New Password <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newPassword" placeholder="Enter new password" minlength="6" />
+                        <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">
+                            <i class="bi bi-dice-5"></i> Generate
+                        </button>
+                    </div>
+                    <div class="form-text">Minimum 6 characters.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="btnResetPassword">
+                    <i class="bi bi-check2-circle me-1"></i>Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        const perms = @Html.Raw(Model.PermissionsJson);
+        let usersTable;
+
+        $(document).ready(function () {
+            initDataTable();
+        });
+
+        function initDataTable() {
+            usersTable = $('#usersTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/V1/GetUsers',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'fullName' },
+                    { data: 'email' },
+                    { data: 'userName' },
+                    {
+                        data: 'roles',
+                        render: function (d) {
+                            if (!d || d.length === 0) return '<span class="text-muted">None</span>';
+                            return d.map(function (r) {
+                                var badgeClass = r === 'SuperAdmin' ? 'badge-superadmin' : 'badge-role';
+                                return '<span class="badge bg-success ' + badgeClass + ' me-1">' + r + '</span>';
+                            }).join(' ');
+                        }
+                    },
+                    {
+                        data: 'isActive',
+                        render: function (d) {
+                            return d ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>';
+                        },
+                        width: '90px'
+                    },
+                    {
+                        data: 'lastLoginDate',
+                        render: function (d) {
+                            if (!d) return '<span class="text-muted">Never</span>';
+                            var dt = new Date(d);
+                            return dt.getDate().toString().padStart(2,'0') + '-' + dt.toLocaleString('en-GB',{month:'short'}) + '-' + dt.getFullYear();
+                        },
+                        width: '110px'
+                    },
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            var html = '<div class="dropdown text-center"><button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu dropdown-menu-end">';
+                            if (perms['User.Edit']) {
+                                html += '<li><a class="dropdown-item" href="/Admin/employee-data/employees/upsert?id=' + row.emp + '&fullName=' + encodeURIComponent(row.fullName) + '&isActive=' + row.isActive + '"><i class="bi bi-pencil-square"></i>Edit</a></li>';
+                                html += '<li><a class="dropdown-item" href="javascript:void(0)" onclick="openResetPasswordModal(\'' + data + '\',\'' + row.fullName.replace(/'/g, "\\'") + '\')"><i class="bi bi-key"></i>Reset Password</a></li>';
+                            }
+                            if (perms['User.AssignRole']) {
+                                html += '<li><a class="dropdown-item" href="/Admin/Users/Roles?id=' + data + '&name=' + encodeURIComponent(row.fullName) + '"><i class="bi bi-shield-fill"></i>Roles</a></li>';
+                            }
+                            if (perms['User.Delete']) {
+                                var isSuperAdmin = row.roles && row.roles.indexOf('SuperAdmin') !== -1;
+                                if (!isSuperAdmin) {
+                                    html += '<li><hr class="dropdown-divider"></li>';
+                                    html += '<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(\'' + data + '\')"><i class="bi bi-trash3"></i>Delete</a></li>';
+                                }
+                            }
+                            html += '</ul></div>';
+                            return html;
+                        },
+                        orderable: false,
+                        width: '80px'
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete User?',
+                text: 'This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+
+                    unBlockUlloader();
+                    $.ajax({
+                        url: '/V1/DeleteUser',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                usersTable.ajax.reload();
+                            } else {
+                                Swal.fire('Error', r.message, 'error');
+                            }
+                        },
+                        complete: function () { $.unblockUI(); },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+        
+        function openResetPasswordModal(userId, userName) {
+            $('#resetUserId').val(userId);
+            $('#resetUserName').text(userName);
+            $('#newPassword').val('');
+            $('#resetPasswordModal').modal('show');
+        }
+
+        function generatePassword() {
+            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var pwd = "";
+            for (var i = 0; i < 10; i++) {
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            $("#newPassword").val(pwd);
+        }
+
+        $("#btnResetPassword").on("click", function () {
+            var userId = $("#resetUserId").val();
+            var newPassword = $("#newPassword").val().trim();
+
+            if (!userId) {
+                Swal.fire("Error", "User ID is missing.", "error");
+                return;
+            }
+            if (!newPassword || newPassword.length < 6) {
+                Swal.fire("Validation", "Password must be at least 6 characters.", "warning");
+                return;
+            }
+
+            var btn = $(this);
+            btn.html('<span class="spinner-border spinner-border-sm"></span> Resetting...').prop("disabled", true);
+
+            $.ajax({
+                url: "/V1/ResetUserPassword",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ UserId: userId, NewPassword: newPassword }),
+                headers: { "RequestVerificationToken": $("input[name='__RequestVerificationToken']").val() },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("Success", res.message, "success");
+                        $("#resetPasswordModal").modal("hide");
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "An error occurred. Please try again.", "error");
+                },
+                complete: function () {
+                    btn.html('<i class="bi bi-check2-circle me-1"></i>Reset Password').prop("disabled", false);
+                }
+            });
+        });
+
+        function unBlockUlloader(){
+            $.blockUI({
+                message: '<div class="bs-spinner mt-4 mt-lg-0"><div class= "spinner-border text-success mr-2 mt-2" style="width: 10rem; height: 10rem;" role="status"><span class="sr-only">Loading...</span></div> ',
+                fadeIn: 800,
+                //timeout: 2000, unblock after 2 seconds
+                overlayCSS: {
+                    backgroundColor: '#1b2024',
+                    opacity: 0.8,
+                    zIndex: 1200,
+                    cursor: 'wait'
+                },
+                css: {
+                    border: 0,
+                    color: '#fff',
+                    zIndex: 1201,
+                    padding: 0,
+                    backgroundColor: 'transparent'
+                },
+                onBlock: function () {
+
+                }
+            });
+        }
+    </script>
+}

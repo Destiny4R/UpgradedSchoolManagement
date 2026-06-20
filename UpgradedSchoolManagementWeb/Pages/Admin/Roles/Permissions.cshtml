@@ -1,0 +1,153 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Roles.PermissionsModel
+@{
+    ViewData["Title"] = "Role Permissions";
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-shield-check me-2" style="color:var(--accent)"></i>Permissions for @Model.Name</div>
+            <div class="mgmt-sub">Assign permissions to this role</div>
+        </div>
+        <a class="btn-mgmt-secondary" href="/Admin/Roles">
+            <i class="bi bi-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+            <h6><i class="bi bi-check2-square me-2" style="color:var(--accent2)"></i>Permissions</h6>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="selectAll()"><i class="bi bi-check-all"></i> Select All</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="deselectAll()"><i class="bi bi-x"></i> Clear All</button>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <input type="hidden" id="roleId" value="@Model.Id" />
+            <div id="permissionsContainer">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading permissions...</p>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="savePermissions()">
+                    <i class="bi bi-check2-circle me-1"></i> Save Permissions
+                </button>
+                <a class="btn btn-secondary" href="/Admin/Roles">Cancel</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        var allPermissions = [];
+        var assignedCodes = [];
+
+        $(document).ready(function () {
+            loadPermissions();
+        });
+
+        function loadPermissions() {
+            $.ajax({
+                url: '/V1/GetAllPermissions',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (perms) {
+                    allPermissions = perms;
+                    loadAssigned();
+                }
+            });
+        }
+
+        function loadAssigned() {
+            $.ajax({
+                url: '/V1/GetRolePermissions',
+                type: 'POST',
+                data: JSON.stringify({ Id: $('#roleId').val() }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (codes) {
+                    assignedCodes = codes || [];
+                    renderPermissions();
+                }
+            });
+        }
+
+        function renderPermissions() {
+            var modules = {};
+            allPermissions.forEach(function (p) {
+                if (!modules[p.module]) modules[p.module] = [];
+                modules[p.module].push(p);
+            });
+
+            var html = '';
+            var orderedModules = Object.keys(modules).sort();
+            orderedModules.forEach(function (module) {
+                html += '<div class="mb-4">';
+                html += '<h6 class="border-bottom pb-2 mb-2 fw-bold" style="color:var(--accent)">' + module + '</h6>';
+                html += '<div class="row">';
+                modules[module].forEach(function (perm) {
+                    var checked = assignedCodes.indexOf(perm.code) !== -1 ? 'checked' : '';
+                    var isFullControl = perm.code.indexOf('.fullcontrol') !== -1;
+                    var classAttr = isFullControl ? ' class="fw-semibold text-primary"' : '';
+                    html += '<div class="col-md-4 col-sm-6 mb-1">';
+                    html += '<div class="form-check">';
+                    html += '<input class="form-check-input perm-checkbox" type="checkbox" value="' + perm.id + '" data-code="' + perm.code + '" ' + checked + ' data-fullcontrol="' + isFullControl + '" ' + (isFullControl ? 'onchange="handleFullControl(this)"' : '') + ' id="perm_' + perm.id + '">';
+                    html += '<label class="form-check-label" ' + classAttr + ' for="perm_' + perm.id + '">' + perm.name + '</label>';
+                    html += '</div></div>';
+                });
+                html += '</div></div>';
+            });
+
+            $('#permissionsContainer').html(html);
+        }
+
+        function handleFullControl(el) {
+            if (!el.checked) return;
+            var prefix = $(el).data('code').replace('.fullcontrol', '');
+            $('.perm-checkbox').each(function () {
+                var code = $(this).data('code');
+                if (code && code.indexOf(prefix + '.') === 0 && !$(this).data('fullcontrol')) {
+                    $(this).prop('checked', true);
+                }
+            });
+        }
+
+        function selectAll() {
+            $('.perm-checkbox').prop('checked', true);
+        }
+
+        function deselectAll() {
+            $('.perm-checkbox').prop('checked', false);
+        }
+
+        function savePermissions() {
+            var permissionIds = [];
+            $('.perm-checkbox:checked').each(function () {
+                permissionIds.push(parseInt($(this).val()));
+            });
+
+            $.ajax({
+                url: '/V1/AssignPermissions',
+                type: 'POST',
+                data: JSON.stringify({ RoleId: $('#roleId').val(), PermissionIds: permissionIds }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire('Saved!', r.message, 'success');
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        }
+    </script>
+}

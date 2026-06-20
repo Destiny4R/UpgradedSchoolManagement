@@ -1,0 +1,199 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.student.profileModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-person-circle me-2" style="color:var(--accent)"></i>My Profile</div>
+            <div class="mgmt-sub">Personal and academic information</div>
+        </div>
+    </div>
+
+    <!-- Student Info Card -->
+    <div class="mgmt-card fade-in mb-4">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-info-circle me-2" style="color:var(--accent)"></i>Personal Information</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="row">
+                <div class="col-12 text-center mb-4">
+                    <div id="avatarContainer" style="width:120px;height:120px;margin:0 auto;border-radius:50%;overflow:hidden;border:3px solid var(--accent);background:#e9ecef;display:flex;align-items:center;justify-content:center;">
+                        <img id="sPicture" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none;" />
+                        <i id="avatarPlaceholder" class="bi bi-person-fill" style="font-size:48px;color:#adb5bd;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="row" id="studentInfo">
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Full Name</div>
+                    <div class="fw-semibold" id="sFullName">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Admission Number</div>
+                    <div class="fw-semibold" id="sAdmission">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Gender</div>
+                    <div id="sGender">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Date of Birth</div>
+                    <div id="sDob">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Nationality</div>
+                    <div id="sNationality">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">State of Origin</div>
+                    <div id="sState">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">LGA</div>
+                    <div id="sLga">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Address</div>
+                    <div id="sAddress">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Email</div>
+                    <div id="sEmail">—</div>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <div class="text-muted small">Account Status</div>
+                    <div id="sStatus">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Registration -->
+    <div class="mgmt-card fade-in mb-4">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-book me-2" style="color:var(--accent2)"></i>Current Registration</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="row" id="currentRegInfo">
+                <div class="col-sm-4 mb-3">
+                    <div class="text-muted small">Class</div>
+                    <div class="fw-semibold" id="cClass">—</div>
+                </div>
+                <div class="col-sm-4 mb-3">
+                    <div class="text-muted small">Session</div>
+                    <div class="fw-semibold" id="cSession">—</div>
+                </div>
+                <div class="col-sm-4 mb-3">
+                    <div class="text-muted small">Term</div>
+                    <div class="fw-semibold" id="cTerm">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parents / Guardians -->
+    <div class="mgmt-card fade-in mb-4">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-people me-2" style="color:var(--accent3)"></i>Parents / Guardians</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="parentsTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Relationship</th>
+                            <th>Occupation</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parentsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $.get('/Home/GetMyProfile', function (res) {
+                if (!res.success) {
+                    $('#studentInfo').html('<div class="alert alert-danger">' + (res.message || 'Failed to load profile.') + '</div>');
+                    return;
+                }
+                var d = res.data;
+                var s = d.student;
+
+                // Profile picture
+                var img = $('#sPicture');
+                var placeholder = $('#avatarPlaceholder');
+                var container = $('#avatarContainer');
+                if (s.picturePath) {
+                    img.attr('src', s.picturePath).show();
+                    placeholder.hide();
+                } else {
+                    img.hide();
+                    placeholder.show();
+                    var gender = (s.gender || '').toLowerCase();
+                    if (gender === 'male') {
+                        placeholder.attr('class', 'bi bi-person-fill');
+                        container.css('background', '#d0e8ff');
+                        placeholder.css('color', '#0d6efd');
+                    } else if (gender === 'female') {
+                        placeholder.attr('class', 'bi bi-person-fill');
+                        container.css('background', '#f8d7da');
+                        placeholder.css('color', '#dc3545');
+                    } else {
+                        placeholder.attr('class', 'bi bi-person-fill');
+                        container.css('background', '#e9ecef');
+                        placeholder.css('color', '#adb5bd');
+                    }
+                }
+
+                $('#sFullName').text(s.fullName || '—');
+                $('#sAdmission').text(s.admissionNumber || '—');
+                $('#sGender').text(s.gender || '—');
+                $('#sDob').text(s.dateOfBirth || '—');
+                $('#sNationality').text(s.nationality || '—');
+                $('#sState').text(s.state || '—');
+                $('#sLga').text(s.localGov || '—');
+                $('#sAddress').text(s.address || '—');
+                $('#sEmail').text(s.email || '—');
+
+                if (s.isActive) {
+                    $('#sStatus').html('<span class="badge bg-success">Active</span>');
+                } else {
+                    $('#sStatus').html('<span class="badge bg-danger">Inactive</span>');
+                }
+
+                var reg = d.currentRegistration;
+                if (reg) {
+                    $('#cClass').text(reg.schoolClass || '—');
+                    $('#cSession').text(reg.session || '—');
+                    $('#cTerm').text(reg.term || '—');
+                }
+
+                var tbody = $('#parentsBody');
+                tbody.empty();
+                if (d.parents && d.parents.length) {
+                    d.parents.forEach(function (p) {
+                        tbody.append('<tr>' +
+                            '<td class="fw-semibold">' + (p.fullName || '—') + '</td>' +
+                            '<td>' + (p.relationship || '—') + '</td>' +
+                            '<td>' + (p.occupation || '—') + '</td>' +
+                            '<td>' + (p.phone1 || '') + (p.phone2 ? ' / ' + p.phone2 : '') + '</td>' +
+                            '<td>' + (p.address || '—') + '</td>' +
+                            '</tr>');
+                    });
+                } else {
+                    tbody.append('<tr><td colspan="5" class="text-muted text-center">No parent/guardian information available.</td></tr>');
+                }
+            });
+        });
+    </script>
+}

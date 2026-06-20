@@ -1,0 +1,165 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.employee_data.employees.indexModel
+@{
+    ViewData["Title"] = "Employees";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-people-fill me-2" style="color:var(--accent)"></i>Employees</div>
+            <div class="mgmt-sub">Manage employee records and accounts</div>
+        </div>
+        <a asp-page="/Admin/employee-data/employees/upsert" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Add Employee
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Employees</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="employeesTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Full Name</th>
+                            <th>Gender</th>
+                            <th>Employee Type</th>
+                            <th>Employee Code</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let employeesTable;
+
+        $(document).ready(function () {
+            employeesTable = $('#employeesTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetEmployees',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'fullName' },
+                    { data: 'gender', width: '80px' },
+                    { data: 'employeeType' },
+                    { data: 'employeeCode' },
+                    { data: 'email' },
+                    {
+                        data: 'isActive', width: '90px',
+                        render: function (data) {
+                            return data
+                                ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>'
+                                : '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Inactive</span>';
+                        }
+                    },
+                    {
+                        data: 'id', orderable: false, width: '80px',
+                        render: function (data, type, row) {
+                            return '<div class="dropdown text-center">' +
+                                '<button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>' +
+                                '<ul class="dropdown-menu dropdown-menu-end">' +
+                                '<li><a class="dropdown-item" href="/Admin/employee-data/employees/upsert?id=' + data + '"><i class="bi bi-pencil-square"></i>Edit</a></li>' +
+                                '<li><hr class="dropdown-divider"></li>' +
+                                '<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(' + data + ')"><i class="bi bi-trash3"></i>Delete</a></li>' +
+                                '</ul></div>';
+                        }
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+        });
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Employee?',
+                text: 'This will permanently delete the employee and their associated user account.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+
+                    unBlockUlloader();
+
+                    $.ajax({
+                        url: '/V1/DeleteEmployee',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                employeesTable.ajax.reload();
+                            } else {
+                                Swal.fire('Error', r.message, 'error');
+                            }
+                        },
+                        complete: function () { $.unblockUI(); },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+        function unBlockUlloader(){
+            $.blockUI({
+                message: '<div class="bs-spinner mt-4 mt-lg-0"><div class= "spinner-border text-success mr-2 mt-2" style="width: 10rem; height: 10rem;" role="status"><span class="sr-only">Loading...</span></div> ',
+                fadeIn: 800,
+                //timeout: 2000, unblock after 2 seconds
+                overlayCSS: {
+                    backgroundColor: '#1b2024',
+                    opacity: 0.8,
+                    zIndex: 1200,
+                    cursor: 'wait'
+                },
+                css: {
+                    border: 0,
+                    color: '#fff',
+                    zIndex: 1201,
+                    padding: 0,
+                    backgroundColor: 'transparent'
+                },
+                onBlock: function () {
+
+                }
+            });
+        }
+    </script>
+}

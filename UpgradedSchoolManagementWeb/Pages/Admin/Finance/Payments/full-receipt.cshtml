@@ -1,0 +1,334 @@
+@page "{termRegId:int}"
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments.full_receiptModel
+@using Microsoft.Extensions.Options
+@inject IOptions<SchoolConfigurationSetup> SchoolConfig
+@{
+    Layout = null;
+    var r = Model.Receipt;
+    var cfg = SchoolConfig.Value;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Receipt - @r?.StudentName</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #222;
+            background: #f4f4f4;
+            padding: 1rem;
+        }
+
+        .receipt-page {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 2rem 2.5rem;
+        }
+
+        .receipt-top {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            border-bottom: 3px double #333;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .receipt-top img { width: 80px; height: 80px; object-fit: contain; }
+        .receipt-top .school-info { flex: 1; text-align: center; }
+        .receipt-top .school-info h1 {
+            font-size: 1.5rem;
+            margin-bottom: .15rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .receipt-top .school-info p { font-size: .85rem; color: #555; margin-bottom: .1rem; }
+        .receipt-top .school-info .receipt-label {
+            display: inline-block;
+            margin-top: .5rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a6e33;
+            border: 2px solid #1a6e33;
+            padding: .15rem .75rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .student-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .35rem 2rem;
+            margin-bottom: 1.5rem;
+            font-size: .9rem;
+        }
+        .student-info .info-row { display: flex; gap: .5rem; }
+        .student-info .info-label { font-weight: 600; min-width: 110px; }
+
+        .summary-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-card {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: .75rem;
+            text-align: center;
+        }
+        .summary-card .value { font-size: 1.35rem; font-weight: 700; }
+        .summary-card .label { font-size: .78rem; color: #777; margin-top: 2px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.25rem;
+            font-size: .88rem;
+        }
+        table th, table td {
+            padding: .45rem .75rem;
+            border: 1px solid #ddd;
+        }
+        table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            text-align: left;
+        }
+        table th.amount, table td.amount { text-align: right; }
+        table tfoot td { font-weight: 700; background: #eef5ee; }
+
+        .section-title {
+            font-size: .95rem;
+            font-weight: 700;
+            color: #2c3e50;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 4px;
+            margin-bottom: .75rem;
+            margin-top: 1.25rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 3px;
+            font-size: .78rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+
+        .grand-total-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1.5rem;
+            padding: .75rem 1rem;
+            background: #1a6e33;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .receipt-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #aaa;
+            display: flex;
+            justify-content: space-between;
+            font-size: .8rem;
+            color: #777;
+        }
+
+        .no-print { text-align: center; margin-bottom: 1rem; }
+        .btn-print {
+            padding: .5rem 1.5rem;
+            font-size: .95rem;
+            font-weight: 600;
+            color: #fff;
+            background: #1a6e33;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-print:hover { background: #145524; }
+        .btn-back {
+            padding: .5rem 1.5rem;
+            font-size: .95rem;
+            font-weight: 600;
+            color: #333;
+            background: #e9ecef;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: .5rem;
+        }
+        .btn-back:hover { background: #dee2e6; }
+
+        @@media print {
+            body { background: #fff; padding: 0; }
+            .receipt-page { border: none; padding: 1rem; max-width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+@if (r != null)
+{
+    <div class="no-print">
+        <a href="/Admin/Finance/Payments/Index" class="btn-back">&larr; Back to Payments</a>
+        <button class="btn-print" onclick="window.print()">Print Receipt</button>
+    </div>
+
+    <div class="receipt-page">
+        <div class="receipt-top">
+            @if (!string.IsNullOrEmpty(cfg.LogoUrl))
+            {
+                <img src="@cfg.LogoUrl" alt="School Logo" style="width:80px;height:80px;object-fit:contain;" />
+            }
+            else
+            {
+                <div style="width:80px;height:80px;background:#f0f0f0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#999;"><i class="bi bi-mortarboard-fill"></i></div>
+            }
+            <div class="school-info">
+                <h1>@cfg.Name</h1>
+                <p>@cfg.Motto</p>
+                <span class="receipt-label">Full Term Receipt</span>
+            </div>
+            @if (!string.IsNullOrEmpty(cfg.LogoUrl))
+            {
+                <img src="@cfg.LogoUrl" alt="" style="width:80px;height:80px;object-fit:contain;visibility:hidden;" />
+            }
+        </div>
+
+        <div class="student-info">
+            <div class="info-row"><span class="info-label">Student Name:</span><span>@r.StudentName</span></div>
+            <div class="info-row"><span class="info-label">Admission No:</span><span>@r.AdmissionNo</span></div>
+            <div class="info-row"><span class="info-label">Class:</span><span>@r.ClassName@(string.IsNullOrEmpty(r.SubClassName) ? "" : " - " + r.SubClassName)</span></div>
+            <div class="info-row"><span class="info-label">Session:</span><span>@r.SessionName</span></div>
+            <div class="info-row"><span class="info-label">Term:</span><span>@r.TermName</span></div>
+            <div class="info-row"><span class="info-label">Print Date:</span><span>@r.PrintDate.ToString("dd/MM/yyyy hh:mm tt")</span></div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-card">
+                <div class="value" style="color:#1a6e33">@SD.ToNaira(r.TotalExpected)</div>
+                <div class="label">Total Expected</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" style="color:#155e9b">@SD.ToNaira(r.TotalPaid)</div>
+                <div class="label">Total Paid</div>
+            </div>
+            <div class="summary-card">
+                <div class="value" style="color:#c0392b">@SD.ToNaira(r.Outstanding)</div>
+                <div class="label">Outstanding Balance</div>
+            </div>
+        </div>
+
+        @if (r.Breakdown.Any())
+        {
+            <div class="section-title">Fee Item Breakdown</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Item</th>
+                        <th class="amount">Expected</th>
+                        <th class="amount">Paid</th>
+                        <th class="amount">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in r.Breakdown)
+                    {
+                        <tr>
+                            <td>@b.CategoryName</td>
+                            <td>@b.ItemName</td>
+                            <td class="amount">@SD.ToNaira(b.Expected)</td>
+                            <td class="amount">@SD.ToNaira(b.Paid)</td>
+                            <td class="amount">@SD.ToNaira(b.Balance)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2" class="amount">Totals</td>
+                        <td class="amount">@SD.ToNaira(r.TotalExpected)</td>
+                        <td class="amount">@SD.ToNaira(r.TotalPaid)</td>
+                        <td class="amount">@SD.ToNaira(r.Outstanding)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+
+        @if (r.Payments.Any())
+        {
+            <div class="section-title">Payment History</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th class="amount">Amount</th>
+                        <th style="width:100px">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var i = 0; }
+                    @foreach (var p in r.Payments)
+                    {
+                        i++;
+                        var badgeClass = p.Status == "Completed" ? "badge-success"
+                            : p.Status == "Pending" ? "badge-warning"
+                            : p.Status == "Rejected" ? "badge-danger"
+                            : "badge-secondary";
+                        <tr>
+                            <td>@i</td>
+                            <td style="font-family:monospace">@p.Reference</td>
+                                <td>@p.Date.ToString("dd/MM/yyyy hh:mm tt")</td>
+                            <td class="amount">@SD.ToNaira(p.Amount)</td>
+                            <td><span class="badge @badgeClass">@p.Status</span></td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="amount">Total Paid</td>
+                        <td class="amount">@SD.ToNaira(r.TotalPaid)</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+
+        <div class="grand-total-bar">
+            <span>Outstanding Balance:</span>
+            <span>@SD.ToNaira(r.Outstanding)</span>
+        </div>
+
+        <div class="receipt-footer">
+            <span>This is a computer-generated receipt. No signature required.</span>
+            <span>Printed: @r.PrintDate.ToString("dd/MM/yyyy hh:mm tt")</span>
+        </div>
+    </div>
+}
+else
+{
+    <div style="max-width:600px;margin:2rem auto;padding:1rem;background:#f8d7da;color:#842029;border-radius:4px;text-align:center;">
+        Receipt data not found.
+    </div>
+}
+</body>
+</html>

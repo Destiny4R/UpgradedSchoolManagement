@@ -1,0 +1,396 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Academic.TerminalSkills.IndexModel
+@{
+    ViewData["Title"] = "Terminal Skills";
+}
+
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-stars me-2" style="color:var(--accent)"></i>Terminal Skills</div>
+            <div class="mgmt-sub">Configure Psychomotor and Affective skills and assign them by class</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn-mgmt-primary" id="btnOpenSkillModal" data-bs-toggle="modal" data-bs-target="#skillModal">
+                <i class="bi bi-plus-lg"></i> Add Skill
+            </button>
+            <button class="btn-mgmt-primary" id="btnOpenAssignModal" data-bs-toggle="modal" data-bs-target="#assignModal">
+                <i class="bi bi-diagram-3"></i> Assign to Class
+            </button>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in mb-3">
+        <div class="mgmt-card-head d-flex align-items-center gap-2 flex-wrap">
+            <h6 class="mb-0"><i class="bi bi-funnel me-2" style="color:var(--accent2)"></i>Assigned Skills Filter</h6>
+            <select id="assignedClassFilter" class="form-select form-select-sm" style="max-width:320px">
+                <option value="0">All Classes</option>
+                @foreach (var cls in Model.SelectionViewModal.SchoolClasses)
+                {
+                    <option value="@cls.Value">@cls.Text</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-journal-check me-2" style="color:var(--accent2)"></i>Terminal Skill Catalog</h6>
+            <div>
+                <button class="btn-mgmt-primary" id="btnOpenSkillModal" data-bs-toggle="modal" data-bs-target="#skillModal">
+                    <i class="bi bi-plus-lg"></i> Add Skill
+                </button>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <table id="skillTable" class="table w-100">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Skill Name</th>
+                        <th>Domain</th>
+                        <th>Display Order</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in mt-3">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-people-fill me-2" style="color:var(--accent2)"></i>Class Skill Assignments</h6>
+            <div>
+                <button class="btn-mgmt-primary" id="btnOpenAssignModal" data-bs-toggle="modal" data-bs-target="#assignModal">
+                    <i class="bi bi-diagram-3"></i> Assign to Class
+                </button>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <table id="assignedSkillTable" class="table w-100">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Class</th>
+                        <th>Skill Name</th>
+                        <th>Domain</th>
+                        <th>Display Order</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="skillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header text-white">
+                <h5 class="modal-title" id="skillModalTitle">Add Terminal Skill</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="skillId" />
+                <div class="mb-3">
+                    <label class="form-label">Skill Name <span class="text-danger">*</span></label>
+                    <input id="skillName" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Domain <span class="text-danger">*</span></label>
+                    <select id="skillDomain" class="form-select">
+                        <option value="1">Affective</option>
+                        <option value="2">Psychomotor</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Display Order <span class="text-danger">*</span></label>
+                    <input id="skillOrder" type="number" min="1" class="form-control" />
+                </div>
+                <div class="form-check">
+                    <input id="skillActive" class="form-check-input" type="checkbox" checked />
+                    <label class="form-check-label">Active</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnSaveSkill">Save Skill</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header text-white">
+                <h5 class="modal-title">Assign Terminal Skills to Class</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Class <span class="text-danger">*</span></label>
+                    <select id="assignClass" class="form-select" asp-items="@Model.SelectionViewModal.SchoolClasses">
+                        <option value="">--- Select Class ---</option>
+                    </select>
+                </div>
+                <div id="skillCheckboxes" class="row g-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnSaveAssignment">Save Assignment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        function getHeaders() {
+            return { 'Content-Type': 'application/json', 'RequestVerificationToken': token };
+        }
+
+        async function postJson(url, body) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(body)
+            });
+            return res.json();
+        }
+
+        function toast(message, ok = true) {
+            Swal.fire({
+                icon: ok ? 'success' : 'error',
+                title: message,
+                timer: 3500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+
+        let skillTable;
+        let assignedSkillTable;
+        let allActiveSkills = [];
+
+        function statusBadge(isActive) {
+            return isActive
+                ? '<span class="badge bg-success">Active</span>'
+                : '<span class="badge bg-secondary">Inactive</span>';
+        }
+
+        function domainBadge(domain) {
+            const cls = domain === 'Psychomotor' ? 'bg-info' : 'bg-warning text-dark';
+            return `<span class="badge ${cls}">${domain}</span>`;
+        }
+
+        $('#btnOpenSkillModal').on('click', function () {
+            $('#skillModalTitle').text('Add Terminal Skill');
+            $('#skillId').val('');
+            $('#skillName').val('');
+            $('#skillDomain').val('1');
+            $('#skillOrder').val('');
+            $('#skillActive').prop('checked', true);
+        });
+
+        $('#btnSaveSkill').on('click', async function () {
+            const id = $('#skillId').val();
+            const payload = {
+                id: id ? parseInt(id) : 0,
+                name: $('#skillName').val().trim(),
+                domain: parseInt($('#skillDomain').val()),
+                displayOrder: parseInt($('#skillOrder').val()),
+                isActive: $('#skillActive').is(':checked')
+            };
+
+            if (!payload.name || !payload.displayOrder) {
+                toast('Skill name and display order are required.', false);
+                return;
+            }
+
+            const url = id ? '?handler=UpdateSkill' : '?handler=SaveSkill';
+            const data = await postJson(url, payload);
+            toast(data.message, data.success);
+            if (data.success) {
+                $('#skillModal').modal('hide');
+                skillTable.ajax.reload(null, false);
+                assignedSkillTable.ajax.reload(null, false);
+            }
+        });
+
+        $(document).on('click', '.btn-edit-skill', async function () {
+            const id = $(this).data('id');
+            $('#skillModalTitle').text('Edit Terminal Skill');
+            $('#skillId').val(id);
+            $('#skillName').val($(this).data('name'));
+            $('#skillDomain').val($(this).data('domain'));
+            $('#skillOrder').val($(this).data('order'));
+            $('#skillActive').prop('checked', $(this).data('active') === true);
+            $('#skillModal').modal('show');
+        });
+
+        $(document).on('click', '.btn-toggle-skill', async function () {
+            const id = $(this).data('id');
+            const confirmed = await Swal.fire({
+                title: 'Change Skill Status?',
+                text: 'This will activate or deactivate the selected skill.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Continue'
+            });
+
+            if (!confirmed.isConfirmed) return;
+
+            const data = await postJson('?handler=ToggleSkill', { id });
+            toast(data.message, data.success);
+            if (data.success) {
+                skillTable.ajax.reload(null, false);
+                assignedSkillTable.ajax.reload(null, false);
+            }
+        });
+
+        $('#assignedClassFilter').on('change', function () {
+            assignedSkillTable.ajax.reload(null, false);
+        });
+
+        skillTable = $('#skillTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: function (data, callback) {
+                $.ajax({
+                    url: '?handler=SkillsDataTable',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: { 'RequestVerificationToken': token },
+                    data: JSON.stringify(data),
+                    success: callback,
+                    error: function () { callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] }); }
+                });
+            },
+            columns: [
+                { data: null, orderable: false, render: (d, t, r, m) => m.row + 1 },
+                { data: 'name' },
+                { data: 'domainName', render: v => domainBadge(v) },
+                { data: 'displayOrder' },
+                { data: 'isActive', render: v => statusBadge(v) },
+                {
+                    data: null,
+                    orderable: false,
+                    className: 'text-center',
+                    render: (d, t, r) => `
+                        <button class="btn btn-sm btn-outline-primary btn-edit-skill"
+                            data-id="${r.id}" data-name="${r.name}" data-domain="${r.domain}" data-order="${r.displayOrder}" data-active="${r.isActive}">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary btn-toggle-skill" data-id="${r.id}">
+                            <i class="bi bi-toggle-on"></i>
+                        </button>`
+                }
+            ],
+            pageLength: 10,
+            responsive: true
+        });
+
+        assignedSkillTable = $('#assignedSkillTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: function (data, callback) {
+                const classId = $('#assignedClassFilter').val() || 0;
+                $.ajax({
+                    url: `?handler=AssignedSkillsDataTable&classId=${classId}`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: { 'RequestVerificationToken': token },
+                    data: JSON.stringify(data),
+                    success: callback,
+                    error: function () { callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] }); }
+                });
+            },
+            columns: [
+                { data: null, orderable: false, render: (d, t, r, m) => m.row + 1 },
+                { data: 'className' },
+                { data: 'name' },
+                { data: 'domainName', render: v => domainBadge(v) },
+                { data: 'displayOrder' }
+            ],
+            pageLength: 10,
+            responsive: true
+        });
+
+        $('#btnOpenAssignModal').on('click', async function () {
+            $('#assignClass').val('');
+            $('#skillCheckboxes').html('<div class="text-center text-muted">Select a class to load available skills.</div>');
+            const res = await fetch('?handler=ActiveSkills');
+            const data = await res.json();
+            allActiveSkills = data.success ? data.data : [];
+        });
+
+        $('#assignClass').on('change', async function () {
+            const classId = parseInt($(this).val());
+            if (!classId) {
+                $('#skillCheckboxes').html('<div class="text-center text-muted">Select a class to load available skills.</div>');
+                return;
+            }
+
+            $('#skillCheckboxes').html('<div class="text-center text-muted"><i class="bi bi-arrow-repeat"></i> Loading skills...</div>');
+            const assignedRes = await fetch(`?handler=SkillsByClass&classId=${classId}`);
+            const assignedData = await assignedRes.json();
+            const assignedIds = assignedData.success ? new Set(assignedData.data.map(s => s.id)) : new Set();
+
+            const affective = allActiveSkills.filter(s => s.domain === 1).sort((a, b) => a.displayOrder - b.displayOrder);
+            const psychomotor = allActiveSkills.filter(s => s.domain === 2).sort((a, b) => a.displayOrder - b.displayOrder);
+
+            $('#skillCheckboxes').html(`
+                <div class="col-md-6">
+                    <h6>Affective Domain</h6>
+                    ${buildSkillCheckboxes(affective, assignedIds)}
+                </div>
+                <div class="col-md-6">
+                    <h6>Psychomotor Skills</h6>
+                    ${buildSkillCheckboxes(psychomotor, assignedIds)}
+                </div>`);
+        });
+
+        function buildSkillCheckboxes(skills, assignedIds) {
+            if (!skills.length) return '<p class="text-muted small">No active skills in this domain.</p>';
+            return skills.map(s => `
+                <div class="form-check">
+                    <input class="form-check-input skill-checkbox" type="checkbox" value="${s.id}" ${assignedIds.has(s.id) ? 'checked' : ''} />
+                    <label class="form-check-label">${s.name}</label>
+                </div>`).join('');
+        }
+
+        $('#btnSaveAssignment').on('click', async function () {
+            const classId = parseInt($('#assignClass').val());
+            if (!classId) {
+                toast('Please select a class.', false);
+                return;
+            }
+
+            const selected = $('.skill-checkbox:checked').map(function () { return parseInt(this.value); }).get();
+            if (!selected.length) {
+                toast('Select at least one skill.', false);
+                return;
+            }
+
+            const data = await postJson('?handler=AssignSkillsToClass', { schoolClassId: classId, resultSkillIds: selected });
+            toast(data.message, data.success);
+            if (data.success) {
+                $('#assignModal').modal('hide');
+                assignedSkillTable.ajax.reload(null, false);
+            }
+        });
+    </script>
+}

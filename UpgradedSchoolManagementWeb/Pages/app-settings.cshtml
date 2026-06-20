@@ -1,0 +1,119 @@
+﻿@page
+@model app_settingsModel
+@{
+    ViewData["Title"] = "App Settings";
+}
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi bi-person-plus-fill me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">Application setting management</div>
+        </div>
+        @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Success!</strong> @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Error Alert -->
+        @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                <strong>Error!</strong> @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+    </div>
+    <div class="mgmt-card">
+        <div class="mgmt-card-body">
+            <form method="post">
+                <div class="row g-3 needs-validation">
+                    <div class="col-md-6">
+                        <label asp-for="@Model.appsettingView.Term" class="form-label"></label>
+                        <select class="form-select" asp-for="@Model.appsettingView.Term" required asp-items="Model.SelectionView.Terms">
+                            <option selected disabled value="">Choose Term</option>
+                        </select>
+                        <span class="text-danger" asp-validation-for="@Model.appsettingView.Term"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="@Model.appsettingView.SessionId" class="form-label"></label>
+                        <select class="form-select" asp-for="@Model.appsettingView.SessionId" required asp-items="Model.SelectionView.AcademicSession">
+                            <option selected disabled value="">Choose Session</option>
+                        </select>
+                        <span class="text-danger" asp-validation-for="@Model.appsettingView.SessionId"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="@Model.appsettingView.SchoolClassId" class="form-label"></label>
+                        <select class="form-select" asp-for="@Model.appsettingView.SchoolClassId" required asp-items="Model.SelectionView.SchoolClasses">
+                            <option selected disabled value="">Choose School Class</option>
+                        </select>
+                        <span class="text-danger" asp-validation-for="@Model.appsettingView.SchoolClassId"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="@Model.appsettingView.SubClassId" class="form-label"></label>
+                        <select class="form-select" asp-for="@Model.appsettingView.SubClassId" required asp-items="Model.SelectionView.SubClass">
+                            <option selected disabled value="">Choose Sub Class</option>
+                        </select>
+                        <span class="text-danger" asp-validation-for="@Model.appsettingView.SubClassId"></span>
+                    </div>
+                </div>
+
+                @if (Model.isAdmin == true)
+                {
+                    <fieldset>
+                        <legend class="mt-4">Manage Examination Access Control</legend>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" asp-for="@Model.appsettingView.CanPrintResult">
+                                    <label class="form-check-label" asp-for="@Model.appsettingView.CanPrintResult"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend class="mt-4">Manage Principal Information</legend>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label asp-for="@Model.appsettingView.PrincipalName" class="form-label"></label>
+                                <input asp-for="@Model.appsettingView.PrincipalName" accept="image/png, image/jpeg" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="@Model.appsettingView.PrincipalSignature" class="form-label"></label>
+                                <input asp-for="@Model.appsettingView.PrincipalSignature" accept="image/png, image/jpeg" class="form-control" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend class="mt-4">Manage Cashier Information</legend>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label asp-for="@Model.appsettingView.CashierName" class="form-label"></label>
+                                <input asp-for="@Model.appsettingView.CashierName" accept="image/png, image/jpeg" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="@Model.appsettingView.CashierSignature" class="form-label"></label>
+                                <input asp-for="@Model.appsettingView.CashierSignature" accept="image/png, image/jpeg" class="form-control" />
+                            </div>
+                        </div>
+                    </fieldset>
+                }
+                <button class="mt-3 btn btn-success" type="submit"><i class="bi bi-gear me-2"></i>Save</button>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}

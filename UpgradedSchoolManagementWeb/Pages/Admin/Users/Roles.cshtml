@@ -1,0 +1,132 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Users.RolesModel
+@{
+    ViewData["Title"] = "User Roles";
+}
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-shield-fill me-2" style="color:var(--accent)"></i>Roles for @Model.Name</div>
+            <div class="mgmt-sub">Assign roles to this user</div>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" href="/Admin/Users">
+            <i class="bi bi-arrow-left"></i> Back to Users
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-shield-check me-2" style="color:var(--accent2)"></i>Role Assignment</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <input type="hidden" id="userId" value="@Model.Id" />
+            <div class="row mb-3">
+                @foreach (var role in Model.AllRoles)
+                {
+                    <div class="col-md-4 col-sm-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input role-checkbox" type="checkbox" value="@role.Id" id="role_@role.Id">
+                            <label class="form-check-label" for="role_@role.Id">
+                                <strong>@role.Name</strong>
+                                @if (!string.IsNullOrEmpty(role.Description))
+                                {
+                                    <br /><small class="text-muted">@role.Description</small>
+                                }
+                            </label>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" onclick="saveRoles()">
+                    <i class="bi bi-check2-circle me-1"></i> Save Roles
+                </button>
+                <a class="btn btn-secondary" href="/Admin/Users">Cancel</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            loadUserRoles();
+        });
+
+        function loadUserRoles() {
+            $.ajax({
+                url: '/V1/GetUserRoles',
+                type: 'POST',
+                data: JSON.stringify({ Id: $('#userId').val() }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (roleIds) {
+                    if (roleIds && roleIds.length) {
+                        roleIds.forEach(function (id) {
+                            $('#role_' + id).prop('checked', true);
+                        });
+                    }
+                }
+            });
+        }
+
+        function saveRoles() {
+            var roleIds = [];
+            $('.role-checkbox:checked').each(function () {
+                roleIds.push($(this).val());
+            });
+
+            unBlockUlloader();
+
+            $.ajax({
+                url: '/V1/AssignRoles',
+                type: 'POST',
+                data: JSON.stringify({ UserId: $('#userId').val(), RoleIds: roleIds }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire('Saved!', r.message, 'success');
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); },
+                complete: function () { $.unblockUI(); }
+            });
+        }
+
+        function unBlockUlloader(){
+            $.blockUI({
+                message: '<div class="bs-spinner mt-4 mt-lg-0"><div class= "spinner-border text-success mr-2 mt-2" style="width: 10rem; height: 10rem;" role="status"><span class="sr-only">Loading...</span></div> ',
+                fadeIn: 800,
+                //timeout: 2000, unblock after 2 seconds
+                overlayCSS: {
+                    backgroundColor: '#1b2024',
+                    opacity: 0.8,
+                    zIndex: 1200,
+                    cursor: 'wait'
+                },
+                css: {
+                    border: 0,
+                    color: '#fff',
+                    zIndex: 1201,
+                    padding: 0,
+                    backgroundColor: 'transparent'
+                },
+                onBlock: function () {
+
+                }
+            });
+        }
+
+    </script>
+}

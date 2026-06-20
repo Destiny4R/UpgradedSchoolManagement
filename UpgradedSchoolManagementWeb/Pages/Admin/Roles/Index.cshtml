@@ -1,0 +1,141 @@
+@page
+@using System.Text.Json
+@model UpgradedSchoolManagementWeb.Pages.Admin.Roles.IndexModel
+@{
+    ViewData["Title"] = "Manage Roles";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-shield-fill me-2" style="color:var(--accent)"></i>Roles</div>
+            <div class="mgmt-sub">Manage roles and their permissions</div>
+        </div>
+        @if (Model.CanCreate)
+        {
+            <a class="btn-mgmt-primary" href="/Admin/Roles/Create">
+                <i class="bi bi-plus-lg"></i> Add Role
+            </a>
+        }
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Roles</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="rolesTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Role Name</th>
+                            <th>Description</th>
+                            <th>Users</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        const perms = @Html.Raw(Model.PermissionsJson);
+        let rolesTable;
+
+        $(document).ready(function () {
+            initDataTable();
+        });
+
+        function initDataTable() {
+            rolesTable = $('#rolesTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/V1/GetRoles',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'name' },
+                    { data: 'description', render: function (d) { return d || '-'; } },
+                    { data: 'userCount', width: '80px' },
+                    {
+                        data: 'isActive',
+                        render: function (d) {
+                            return d ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>';
+                        },
+                        width: '90px'
+                    },
+                    { data: 'createdDate', render: function (d) { if (!d) return ''; var dt = new Date(d); return dt.getDate().toString().padStart(2,'0') + '-' + dt.toLocaleString('en-GB',{month:'short'}) + '-' + dt.getFullYear(); }, width: '110px' },
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            var html = '<div class="dropdown text-center"><button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu dropdown-menu-end">';
+                            if (perms['Role.Edit']) {
+                                html += '<li><a class="dropdown-item" href="/Admin/Roles/Edit?id=' + data + '&name=' + encodeURIComponent(row.name) + '&description=' + encodeURIComponent(row.description || '') + '"><i class="bi bi-pencil-square"></i>Edit</a></li>';
+                            }
+                            if (perms['Role.AssignPermission']) {
+                                html += '<li><a class="dropdown-item" href="/Admin/Roles/Permissions?id=' + data + '&name=' + encodeURIComponent(row.name) + '"><i class="bi bi-shield-check"></i>Permissions</a></li>';
+                            }
+                            if (perms['Role.Delete']) {
+                                html += '<li><hr class="dropdown-divider"></li>';
+                                html += '<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(\'' + data + '\')"><i class="bi bi-trash3"></i>Delete</a></li>';
+                            }
+                            html += '</ul></div>';
+                            return html;
+                        },
+                        orderable: false,
+                        width: '80px'
+                    }
+                ],
+                order: [[5, 'desc']]
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Role?',
+                text: 'This action cannot be undone. Users assigned this role will lose its permissions.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeleteRole',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                rolesTable.ajax.reload();
+                            } else {
+                                Swal.fire('Error', r.message, 'error');
+                            }
+                        },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}

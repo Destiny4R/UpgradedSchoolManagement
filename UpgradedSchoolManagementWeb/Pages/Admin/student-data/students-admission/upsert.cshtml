@@ -1,0 +1,310 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.admin.student_data.students_admission.upsertModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Student" : "Add Student";
+    var s = Model.Student;
+}
+@section Sheets {
+    <link href="~/lib/flatpickr/flatpickr.min.css" rel="stylesheet" />
+    <style>
+        .photo-preview-wrap {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--accent);
+            cursor: pointer;
+            margin: 0 auto 0.5rem;
+        }
+        .photo-preview-wrap img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .photo-overlay {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,.45);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity .2s;
+            color: #fff; font-size: 1.4rem;
+        }
+        .photo-preview-wrap:hover .photo-overlay { opacity: 1; }
+        .photo-upload-hint { font-size:.78rem; color: var(--muted); text-align:center; }
+    </style>
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi @(Model.IsEdit ? "bi-pencil-square" : "bi-person-plus-fill") me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">@(Model.IsEdit ? "Update student information" : "Register a new student")</div>
+        </div>
+        <a asp-page="index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form id="studentForm">
+                <input type="hidden" id="studentId" value="@(s?.Id ?? 0)" />
+                <input type="hidden" id="picturePath" value="@(s?.PicturePath ?? "")" />
+
+                <!-- Photo upload -->
+                <div class="text-center mb-4">
+                    <div class="photo-preview-wrap" onclick="$('#photoInput').click()">
+                        <img id="photoPreview"
+                             src="@(string.IsNullOrEmpty(s?.PicturePath) ? "/images/default-avatar.png" : s.PicturePath)"
+                             alt="Student Photo" />
+                        <div class="photo-overlay"><i class="bi bi-camera-fill"></i></div>
+                    </div>
+                    <div class="photo-upload-hint">Click photo to upload (optional &mdash; PNG, JPG, JPEG only)</div>
+                    <input type="file" id="photoInput" accept=".png,.jpg,.jpeg" class="d-none" />
+                    <div id="photoUploadProgress" class="d-none mt-1">
+                        <div class="progress" style="height:6px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+                        </div>
+                        <small class="text-muted">Uploading &amp; compressing…</small>
+                    </div>
+                </div>
+
+                <!-- Personal Details -->
+                <h6 class="mb-3 mt-2" style="color:var(--accent2)"><i class="bi bi-person-lines-fill me-2"></i>Personal Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="surname" value="@(s?.Surname)" placeholder="Last name" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">First Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="firstName" value="@(s?.FirstName)" placeholder="First name" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Other Name</label>
+                        <input type="text" class="form-control" id="otherName" value="@(s?.OtherName)" placeholder="Middle name (optional)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Gender <span class="text-danger">*</span></label>
+                        <select class="form-select" id="gender" required>
+                            <option value="">Select gender…</option>
+                            @if (s?.Gender == UpgradedSchoolManagementModels.Models.ConstantEnums.Gender.Male)
+                            {
+                                <option value="1" selected>Male</option>
+                            }
+                            else
+                            {
+                                <option value="1">Male</option>
+                            }
+
+                            @if (s?.Gender == UpgradedSchoolManagementModels.Models.ConstantEnums.Gender.Female)
+                            {
+                                <option value="2" selected>Female</option>
+                            }
+                            else
+                            {
+                                <option value="2">Female</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="dateOfBirth"
+                               value="@(s != null ? s.DateOfBirth.ToString("yyyy-MM-dd") : "")" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nationality</label>
+                        <input type="text" class="form-control" id="nationality" value="@(s?.Nationality)" placeholder="e.g. Nigerian" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address" value="@(s?.Address)" placeholder="Home address (optional)" />
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <h6 class="mb-3 mt-4" style="color:var(--accent2)"><i class="bi bi-geo-alt-fill me-2"></i>State &amp; LGA</h6>
+                <div class="input-location-dependant d-none">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">State of Origin</label>
+                            <select class="form-select select-state" id="stateSelect" onchange="toggleLGA(this)">
+                                <option value="">Select State…</option>
+                                @foreach (var st in new[] { "Abia","Adamawa","AkwaIbom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+                                    "Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo","Jigawa",
+                                    "Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa",
+                                    "Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara" })
+                                {
+                                    @if (s?.State == st)
+                                    {
+                                        <option value="@st" selected>@st</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@st">@st</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Local Government Area</label>
+                            <select class="form-select select-lga" id="lgaSelect">
+                                <option value="" disabled selected>Select LGA…</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account -->
+                <h6 class="mb-3 mt-4" style="color:var(--accent2)"><i class="bi bi-shield-lock-fill me-2"></i>Account</h6>
+                @if (!Model.IsEdit)
+                {
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Admission Number</label>
+                            <input type="text" class="form-control bg-light" value="Auto-generated (EDU/STD/@(DateTime.Now.Year)/001…)" disabled />
+                            <div class="form-text">A unique sequential admission number will be assigned automatically.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Default Password <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="password" value="School@2025" required />
+                            <div class="form-text">Applied to all new student accounts. Students can change it after first login.</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info py-2 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Admission No: <strong>@(s?.AdmissionNumber ?? "N/A")</strong>
+                    </div>
+                }
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check2-circle me-1"></i> @(Model.IsEdit ? "Update Student" : "Save Student")
+                    </button>
+                    <a asp-page="index" class="btn btn-secondary px-4">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/flatpickr/flatpickr.min.js"></script>
+    <script src="~/js/lga.js"></script>
+    <script>
+        flatpickr("#dateOfBirth", {
+            enableTime: false,
+            dateFormat: "Y-m-d",
+        }); 
+        const isEdit = @(Model.IsEdit ? "true" : "false");
+
+        // ── Photo upload ──────────────────────────────────────────────
+        $('#photoInput').on('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            if (!/\.(png|jpg|jpeg)$/i.test(file.name)) {
+                Swal.fire('Invalid File', 'Only PNG, JPG and JPEG files are accepted.', 'warning');
+                this.value = '';
+                return;
+            }
+            const formData = new FormData();
+            formData.append('photo', file);
+            $('#photoUploadProgress').removeClass('d-none');
+            $.ajax({
+                url: '/V1/UploadStudentPhoto',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    $('#photoUploadProgress').addClass('d-none');
+                    if (r.success) {
+                        $('#picturePath').val(r.path);
+                        $('#photoPreview').attr('src', r.path + '?t=' + Date.now());
+                    } else {
+                        Swal.fire('Upload Failed', r.message, 'error');
+                    }
+                },
+                error: function () {
+                    $('#photoUploadProgress').addClass('d-none');
+                    Swal.fire('Error', 'Photo upload failed. Please try again.', 'error');
+                }
+            });
+        });
+
+        // ── On edit: re-populate LGA after lga.js has revealed the section ──
+        @if (Model.IsEdit && !string.IsNullOrEmpty(s?.State))
+        {
+            <text>
+            $(document).ready(function () {
+                // lga.js runs synchronously on script load (before document.ready)
+                // so the container is already visible by the time we reach here.
+                var stateEl = document.getElementById('stateSelect');
+                if (stateEl && stateEl.value) {
+                    toggleLGA(stateEl);
+                    var savedLga = '@Html.Raw(s?.LocalGov ?? "")';
+                    if (savedLga) {
+                        setTimeout(function () { $('#lgaSelect').val(savedLga); }, 80);
+                    }
+                }
+            });
+            </text>
+        }
+
+        // ── Form submit ───────────────────────────────────────────────
+        $('#studentForm').on('submit', function (e) {
+            e.preventDefault();
+            const dob = $('#dateOfBirth').val();
+            if (!dob)              { Swal.fire('Validation', 'Please enter the date of birth.', 'warning'); return; }
+            if (!$('#gender').val()) { Swal.fire('Validation', 'Please select a gender.', 'warning'); return; }
+
+            const payload = {
+                FirstName:   $('#firstName').val().trim(),
+                Surname:     $('#surname').val().trim(),
+                OtherName:   $('#otherName').val().trim() || null,
+                Gender:      parseInt($('#gender').val()),
+                DateOfBirth: new Date(dob).toISOString(),
+                Nationality: $('#nationality').val().trim() || null,
+                State:       $('#stateSelect').val() || null,
+                LocalGov:    $('#lgaSelect').val() || null,
+                Address:     $('#address').val().trim() || null,
+                PicturePath: $('#picturePath').val() || null
+            };
+
+            let url;
+            if (isEdit) {
+                payload.Id = parseInt($('#studentId').val());
+                url = '/V1/UpdateStudent';
+            } else {
+                payload.Password = $('#password').val();
+                url = '/V1/CreateStudent';
+            }
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({ icon: 'success', title: 'Success', text: r.message,
+                            timer: 1800, showConfirmButton: false })
+                            .then(function () { window.location.href = '/Admin/student-data/students-admission/index'; });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred. Please try again.', 'error');
+                }
+            });
+        });
+    </script>
+}

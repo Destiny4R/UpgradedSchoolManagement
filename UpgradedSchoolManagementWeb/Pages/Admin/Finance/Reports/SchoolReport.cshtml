@@ -1,0 +1,238 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Reports.SchoolReportModel
+@{
+    ViewData["Title"] = "School Collection Report";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-building me-2" style="color:var(--accent)"></i>School Collection Report</div>
+            <div class="mgmt-sub">Overall fee collection summary per class</div>
+        </div>
+        <a asp-page="/Admin/Finance/Payments/Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6><i class="bi bi-funnel me-2" style="color:var(--accent2)"></i>Filter Report</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <form id="filterForm" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Session <span class="text-danger">*</span></label>
+                    <select id="sessionId" class="form-select" required>
+                        <option value="">-- Select Session --</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Term <span class="text-danger">*</span></label>
+                    <select id="termId" class="form-select" required>
+                        <option value="">-- Select Term --</option>
+                        <option value="1">First Term</option>
+                        <option value="2">Second Term</option>
+                        <option value="3">Third Term</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn-mgmt-primary w-100" id="generateBtn">
+                        <i class="bi bi-search me-1"></i> Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reportSection" class="mgmt-card fade-in mt-4" style="display:none">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>Collection Summary by Class - <span id="reportTitle">--</span></h6>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="exportTableToCSV()">
+                    <i class="bi bi-download me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="row g-3 mb-4">
+                <div class="col-sm-3">
+                    <div class="border rounded-3 p-3 text-center" style="background:var(--surface2)">
+                        <div class="fs-4 fw-bold" style="color:var(--accent)" id="grandExpected">0.00</div>
+                        <div class="small text-muted">Total Expected</div>
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="border rounded-3 p-3 text-center" style="background:var(--surface2)">
+                        <div class="fs-4 fw-bold" style="color:var(--accent3)" id="grandPaid">0.00</div>
+                        <div class="small text-muted">Total Collected</div>
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="border rounded-3 p-3 text-center" style="background:var(--surface2)">
+                        <div class="fs-4 fw-bold" style="color:var(--accent4)" id="grandOutstanding">0.00</div>
+                        <div class="small text-muted">Outstanding</div>
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="border rounded-3 p-3 text-center" style="background:var(--surface2)">
+                        <div class="fs-4 fw-bold" style="color:var(--accent5)" id="grandRate">0%</div>
+                        <div class="small text-muted">Collection Rate</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="reportTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th class="text-end">Students</th>
+                            <th class="text-end">Total Expected</th>
+                            <th class="text-end">Total Collected</th>
+                            <th class="text-end">Outstanding</th>
+                            <th class="text-center">Collection Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let reportTable;
+
+        function loadFilters() {
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ draw: 1, start: 0, length: 1000, search: { value: '', regex: false }, order: [{ column: 0, dir: 'asc' }], columns: [] }),
+                success: function (r) {
+                    var sel = $('#sessionId');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+
+            $('#filterForm').on('submit', function (e) {
+                e.preventDefault();
+
+                var sessionId = parseInt($('#sessionId').val());
+                var termId = parseInt($('#termId').val());
+
+                if (!sessionId || !termId) {
+                    Swal.fire('Validation', 'Please select session and term.', 'warning');
+                    return;
+                }
+
+                $('#generateBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Loading...');
+
+                $.ajax({
+                    url: '/Home/GetSchoolReport',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ SessionId: sessionId, TermId: termId }),
+                    success: function (r) {
+                        var data = r.data || r;
+                        if (data && Array.isArray(data)) {
+                            renderReport(data, sessionId, termId);
+                        } else {
+                            Swal.fire('No Data', 'No records found for the selected filters.', 'info');
+                        }
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Failed to generate report.', 'error');
+                    },
+                    complete: function () {
+                        $('#generateBtn').prop('disabled', false).html('<i class="bi bi-search me-1"></i> Generate Report');
+                    }
+                });
+            });
+        });
+
+        function renderReport(data, sessionId, termId) {
+            if (reportTable) {
+                reportTable.destroy();
+                $('#reportTable tbody').empty();
+            }
+
+            $('#reportTitle').text('Session ' + sessionId + ', Term ' + termId);
+            $('#reportSection').show();
+
+            var grandExp = 0, grandPaid = 0, grandOut = 0;
+            var tbody = $('#reportTable tbody');
+            tbody.empty();
+
+            data.forEach(function (row) {
+                var expected = parseFloat(row.totalExpected) || 0;
+                var paid = parseFloat(row.totalPaid) || 0;
+                var outstanding = expected - paid;
+                var rate = expected > 0 ? ((paid / expected) * 100) : 0;
+                grandExp += expected;
+                grandPaid += paid;
+                grandOut += outstanding;
+
+                tbody.append('<tr>' +
+                    '<td><strong>' + (row.className || '--') + '</strong></td>' +
+                    '<td class="text-end">' + (row.studentCount || 0) + '</td>' +
+                    '<td class="text-end">' + expected.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-end">' + paid.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-end">' + outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td class="text-center"><div class="d-flex align-items-center gap-2 justify-content-center">' +
+                    '<div class="progress" style="width:70px;height:6px;background:var(--border)">' +
+                    '<div class="progress-bar" role="progressbar" style="width:' + rate + '%"></div></div>' +
+                    '<span class="small fw-semibold">' + rate.toFixed(1) + '%</span></div></td>' +
+                    '</tr>');
+            });
+
+            var grandRate = grandExp > 0 ? ((grandPaid / grandExp) * 100) : 0;
+            $('#grandExpected').text(grandExp.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#grandPaid').text(grandPaid.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#grandOutstanding').text(grandOut.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#grandRate').text(grandRate.toFixed(1) + '%');
+
+            reportTable = $('#reportTable').DataTable({
+                ordering: true,
+                order: [[0, 'asc']],
+                pageLength: 25,
+                dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip',
+                columnDefs: [{ orderable: false, targets: [5] }]
+            });
+        }
+
+        function exportTableToCSV() {
+            var csv = [];
+            var rows = document.querySelectorAll('#reportTable tr');
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll('td, th');
+                for (var j = 0; j < cols.length; j++) {
+                    row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+                }
+                csv.push(row.join(','));
+            }
+            var blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'SchoolReport_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+}

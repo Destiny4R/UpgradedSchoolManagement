@@ -1,0 +1,148 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Users.CreateModel
+@{
+    ViewData["Title"] = "Create User";
+}
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-person-plus-fill me-2" style="color:var(--accent)"></i>Create User</div>
+            <div class="mgmt-sub">Add a new system user</div>
+        </div>
+        <a class="btn-secondary btn-sm btn" href="/Admin/Users">
+            <i class="bi bi-arrow-left"></i> Back to Users
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form id="userForm">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="fullName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="fullName" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" required />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password" required minlength="8" />
+                        <small class="text-muted">Minimum 8 characters with uppercase, lowercase, digit and special character</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="confirmPassword" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="confirmPassword" required />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Roles</label>
+                    <div class="row">
+                        @foreach (var role in Model.Roles)
+                        {
+                            <div class="col-md-4 col-sm-6 mb-1">
+                                <div class="form-check">
+                                    <input class="form-check-input role-checkbox" type="checkbox" value="@role.Id" id="role_@role.Id">
+                                    <label class="form-check-label" for="role_@role.Id">@role.Name</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle me-1"></i> Create User
+                    </button>
+                    <a class="btn btn-secondary" href="/Admin/Users">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        $('#userForm').on('submit', function (e) {
+            e.preventDefault();
+            var fullName = $('#fullName').val().trim();
+            var email = $('#email').val().trim();
+            var password = $('#password').val();
+            var confirm = $('#confirmPassword').val();
+
+            if (!fullName || !email || !password) {
+                Swal.fire('Validation', 'Please fill in all required fields', 'warning');
+                return;
+            }
+            if (password !== confirm) {
+                Swal.fire('Validation', 'Passwords do not match', 'warning');
+                return;
+            }
+            if (password.length < 8) {
+                Swal.fire('Validation', 'Password must be at least 8 characters', 'warning');
+                return;
+            }
+
+            var roles = [];
+            $('.role-checkbox:checked').each(function () {
+                roles.push($(this).val());
+            });
+
+            unBlockUlloader();
+
+            $.ajax({
+                url: '/V1/CreateUser',
+                type: 'POST',
+                data: JSON.stringify({ FullName: fullName, Email: email, Password: password, Roles: roles.length ? roles : null }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire('Success', r.message, 'success').then(function () {
+                            window.location.href = '/Admin/Users';
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                complete: function () { $.unblockUI(); },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        });
+
+        
+        function unBlockUlloader(){
+            $.blockUI({
+                message: '<div class="bs-spinner mt-4 mt-lg-0"><div class= "spinner-border text-success mr-2 mt-2" style="width: 10rem; height: 10rem;" role="status"><span class="sr-only">Loading...</span></div> ',
+                fadeIn: 800,
+                //timeout: 2000, unblock after 2 seconds
+                overlayCSS: {
+                    backgroundColor: '#1b2024',
+                    opacity: 0.8,
+                    zIndex: 1200,
+                    cursor: 'wait'
+                },
+                css: {
+                    border: 0,
+                    color: '#fff',
+                    zIndex: 1201,
+                    padding: 0,
+                    backgroundColor: 'transparent'
+                },
+                onBlock: function () {
+
+                }
+            });
+        }
+    </script>
+}

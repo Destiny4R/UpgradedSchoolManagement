@@ -1,0 +1,502 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var d = Model.Dashboard;
+    var s = d.Summary;
+    var greeting = DateTime.Now.Hour < 12 ? "Good morning" : DateTime.Now.Hour < 17 ? "Good afternoon" : "Good evening";
+    var userName = User.Identity?.Name ?? "User";
+}
+
+@section Head {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+}
+
+<div class="page">
+
+    <!-- Page Header -->
+    <div class="mb-4 fade-in">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <div class="page-title">@greeting, @userName.Split('@')[0] 👋</div>
+                <div class="page-sub">
+                    Dashboard &nbsp;·&nbsp; @DateTime.Now.ToString("dddd, d MMMM yyyy")
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm" style="background:var(--accent);color:#fff;border-radius:10px;padding:8px 20px;font-size:13px;font-weight:600;border:none;" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- ALERTS -->
+    <!-- ════════════════════════════════════════════ -->
+    @if (d.Alerts.Any())
+    {
+        <div class="row g-2 mb-4">
+            @foreach (var alert in d.Alerts)
+            {
+                var alertClass = alert.Type switch
+                {
+                    "danger" => "alert-danger",
+                    "warning" => "alert-warning",
+                    "info" => "alert-info",
+                    _ => "alert-info"
+                };
+                <div class="col-12 col-md-4 fade-in">
+                    <div class="alert @alertClass d-flex align-items-center justify-content-between mb-0" style="border-radius:12px;padding:12px 16px;">
+                        <span><i class="bi bi-info-circle me-2"></i>@alert.Message</span>
+                        <a href="@alert.ActionLink" class="btn btn-sm btn-outline-dark" style="border-radius:8px;font-size:12px;white-space:nowrap;">@alert.ActionText</a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- SUMMARY CARDS -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3 fade-in">
+            <div class="stat-card blue"><div class="stat-icon blue"><i class="bi bi-people-fill"></i></div><div class="stat-value">@s.TotalStudents.ToString("N0")</div><div class="stat-label">Total Students</div><div class="stat-change up"><i class="bi bi-arrow-up-short"></i>@s.ActiveStudents active</div></div>
+        </div>
+        <div class="col-6 col-lg-3 fade-in">
+            <div class="stat-card purple"><div class="stat-icon purple"><i class="bi bi-person-badge-fill"></i></div><div class="stat-value">@s.TotalTeachers.ToString("N0")</div><div class="stat-label">Teaching Staff</div><div class="stat-change up"><i class="bi bi-arrow-up-short"></i>@s.AssignedSubjects subjects</div></div>
+        </div>
+        <div class="col-6 col-lg-3 fade-in">
+            <div class="stat-card green"><div class="stat-icon green"><i class="bi bi-clipboard2-check-fill"></i></div><div class="stat-value">@s.ResultsPublished.ToString("N0")</div><div class="stat-label">Results Published</div><div class="stat-change @(s.PendingResults > 0 ? "down" : "up")"><i class="bi @(s.PendingResults > 0 ? "bi-arrow-down-short" : "bi-arrow-up-short")"></i>@s.PendingResults pending</div></div>
+        </div>
+        <div class="col-6 col-lg-3 fade-in">
+            <div class="stat-card orange"><div class="stat-icon orange"><i class="bi bi-cash-coin"></i></div><div class="stat-value">₦@((s.TotalRevenueCollected / 1_000_000).ToString("F1"))M</div><div class="stat-label">Revenue Collected</div><div class="stat-change down"><i class="bi bi-arrow-down-short"></i>₦@((s.OutstandingPayments / 1_000_000).ToString("F1"))M outstanding</div></div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Row 2 -->
+    <div class="row g-3 mb-4">
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon blue" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-person-plus-fill"></i></div><div class="stat-value" style="font-size:18px;">@s.TotalTermRegistrations.ToString("N0")</div><div class="stat-label" style="font-size:11px;">Term Regs</div></div>
+        </div>
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon green" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-building"></i></div><div class="stat-value" style="font-size:18px;">@s.TotalClasses</div><div class="stat-label" style="font-size:11px;">Classes</div></div>
+        </div>
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon orange" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-book"></i></div><div class="stat-value" style="font-size:18px;">@s.TotalSubjects</div><div class="stat-label" style="font-size:11px;">Subjects</div></div>
+        </div>
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon purple" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-people"></i></div><div class="stat-value" style="font-size:18px;">@s.TotalParents.ToString("N0")</div><div class="stat-label" style="font-size:11px;">Parents</div></div>
+        </div>
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon red" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-calendar3"></i></div><div class="stat-value" style="font-size:18px;">@s.TotalSessions</div><div class="stat-label" style="font-size:11px;">Sessions</div></div>
+        </div>
+        <div class="col-4 col-lg-2 fade-in">
+            <div class="stat-card" style="text-align:center;padding:14px 8px;"><div class="stat-icon green" style="margin:0 auto 8px;width:36px;height:36px;font-size:16px;"><i class="bi bi-currency-dollar"></i></div><div class="stat-value" style="font-size:18px;">₦@((s.OutstandingPayments / 1_000).ToString("F0"))K</div><div class="stat-label" style="font-size:11px;">Outstanding</div></div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- FINANCIAL & REGISTRATION CHARTS -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-graph-up-arrow me-2" style="color:var(--accent)"></i>Revenue Collection Trend</h6></div>
+                <div class="chart-wrap">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-person-plus me-2" style="color:var(--accent3)"></i>Term Registration Trend</h6></div>
+                <div class="chart-wrap">
+                    <canvas id="registrationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- COMPULSORY COMPLIANCE & STUDENT DISTRIBUTION -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-shield-check me-2" style="color:var(--accent2)"></i>Compulsory Payment Compliance</h6></div>
+                <div class="chart-wrap">
+                    <canvas id="complianceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-pie-chart me-2" style="color:var(--accent5)"></i>Student Distribution</h6></div>
+                <div class="chart-wrap chart-wrap-sm">
+                    <div class="row g-3">
+                        <div class="col-6"><canvas id="genderChart"></canvas></div>
+                        <div class="col-6"><canvas id="sectionChart"></canvas></div>
+                    </div>
+                    <hr class="my-3" />
+                    <div class="row g-2">
+                        <div class="col-12"><h6 style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;">Students by Class</h6></div>
+                        @if (d.StudentDistribution.ByClass.Any())
+                        {
+                            var maxClassCount = d.StudentDistribution.ByClass.Max(x => x.Count);
+                            @foreach (var item in d.StudentDistribution.ByClass.Take(6))
+                            {
+                                var pct = maxClassCount > 0 ? (int)((double)item.Count / maxClassCount * 100) : 0;
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between" style="font-size:12px;margin-bottom:3px;"><span>@item.Name</span><span style="font-weight:600;">@item.Count</span></div>
+                                    <div class="prog-bar-bg mb-2" style="height:5px;"><div class="prog-bar-fill" style="width:@pct%;background:var(--accent);"></div></div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="col-12 text-center text-muted" style="padding:20px 0;">No class data available</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- CLASS PERFORMANCE & ADMISSION TREND -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-trophy me-2" style="color:var(--accent3)"></i>Class Performance</h6></div>
+                <div class="chart-wrap">
+                    @if (d.ClassPerformance.Any())
+                    {
+                        var maxPerf = d.ClassPerformance.Max(x => x.AverageScore);
+                        @foreach (var cp in d.ClassPerformance.Take(8))
+                        {
+                            var pct = maxPerf > 0 ? (int)(cp.AverageScore / maxPerf * 100) : 0;
+                            var perfColor = cp.AverageScore >= 70 ? "var(--accent3)" : cp.AverageScore >= 50 ? "var(--accent5)" : "var(--accent4)";
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between" style="font-size:12px;margin-bottom:3px;">
+                                    <span>@cp.ClassName</span>
+                                    <span style="font-weight:600;">@cp.AverageScore% <span style="color:var(--muted);font-weight:400;">(@cp.StudentCount students)</span></span>
+                                </div>
+                                <div class="prog-bar-bg" style="height:6px;"><div class="prog-bar-fill" style="width:@pct%;background:@perfColor;border-radius:6px;"></div></div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4"><i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No performance data available</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <!-- RECENT ACTIVITIES & QUICK ACTIONS -->
+    <!-- ════════════════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6 fade-in">
+            <div class="section-card">
+                <div class="section-head"><h6><i class="bi bi-clock-history me-2" style="color:var(--accent)"></i>Recent Activities</h6></div>
+                <div>
+                    @if (d.RecentActivities.Any())
+                    {
+                        @foreach (var act in d.RecentActivities)
+                        {
+                            <div class="d-flex align-items-center gap-3 px-4 py-3" style="border-bottom:1px solid rgba(37,42,66,.35);">
+                                <div style="width:36px;height:36px;border-radius:10px;background:rgba(79,124,255,.1);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;">
+                                    <i class="bi @act.Icon"></i>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:13px;font-weight:600;">@act.Title</div>
+                                    <div style="font-size:12px;color:var(--muted);">@act.Description</div>
+                                </div>
+                                <div style="font-size:11px;color:var(--muted);white-space:nowrap;">@act.TimeAgo</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">No recent activities</div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-3 fade-in d-flex">
+            <div class="section-card w-100">
+                <div class="section-head"><h6><i class="bi bi-lightning me-2" style="color:var(--accent5)"></i>Quick Actions</h6></div>
+                <div style="padding:12px 16px;">
+                    <div class="row g-2">
+                        @foreach (var action in d.QuickActions)
+                        {
+                            var actionColor = action.Color switch
+                            {
+                                "blue" => "var(--accent)",
+                                "green" => "var(--accent3)",
+                                "purple" => "var(--accent2)",
+                                "orange" => "var(--accent5)",
+                                "red" => "var(--accent4)",
+                                _ => "var(--accent)"
+                            };
+                            <div class="col-6">
+                                <a href="@action.Link" class="d-flex flex-column align-items-center gap-1 p-3" style="border:1px solid var(--border);border-radius:12px;text-decoration:none;transition:background .15s;color:var(--text);"
+                                   onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(79,124,255,.1);display:flex;align-items:center;justify-content:center;color:@actionColor;">
+                                        <i class="bi @action.Icon" style="font-size:18px;"></i>
+                                    </div>
+                                    <div style="font-size:11px;font-weight:600;text-align:center;line-height:1.2;">@action.Title</div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-3 fade-in d-flex">
+            <div class="section-card w-100">
+                <div class="section-head"><h6><i class="bi bi-bell me-2" style="color:var(--accent4)"></i>Enrollment Stats</h6></div>
+                <div class="chart-wrap chart-wrap-xs">
+                    <div class="text-center mb-3">
+                        <div style="font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--accent4);">@s.TotalStudentsNew.ToString("N0")</div>
+                        <div style="font-size:12px;color:var(--muted);">Total Enrolled All Time</div>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-2"><span style="font-size:12px;color:var(--muted);">Active Students</span><span style="font-weight:600;color:var(--accent3);">@s.ActiveStudents.ToString("N0")</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span style="font-size:12px;color:var(--muted);">Term Registrations</span><span style="font-weight:600;">@s.TotalTermRegistrations.ToString("N0")</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span style="font-size:12px;color:var(--muted);">Students with Results</span><span style="font-weight:600;">@s.StudentsWithResults.ToString("N0")</span></div>
+                    <div class="d-flex justify-content-between"><span style="font-size:12px;color:var(--muted);">Outstanding Compliance</span><span style="font-weight:600;color:var(--accent4);">@s.StudentsWithOutstandingCompliance</span></div>
+                    <hr />
+                    <div style="height:100px;">
+                        <canvas id="admissionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e8eaf6' : '#1a1d2e';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+            Chart.defaults.color = textColor;
+            Chart.defaults.borderColor = gridColor;
+
+            // ──────────────────────────────────────────
+            // REVENUE TREND
+            // ──────────────────────────────────────────
+            const revLabels = []; const revFirst = []; const revSecond = []; const revThird = [];
+            const revData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.RevenueTrend));
+            const sessions = [...new Set(revData.map(r => r.SessionName))];
+            sessions.forEach(s => {
+                const terms = revData.filter(r => r.SessionName === s);
+                revLabels.push(s);
+                const f = terms.find(t => t.Term === 'First');
+                const sec = terms.find(t => t.Term === 'Second');
+                const th = terms.find(t => t.Term === 'Third');
+                revFirst.push(f ? f.Amount : 0);
+                revSecond.push(sec ? sec.Amount : 0);
+                revThird.push(th ? th.Amount : 0);
+            });
+
+            new Chart(document.getElementById('revenueChart'), {
+                type: 'bar',
+                data: {
+                    labels: revLabels,
+                    datasets: [
+                        { label: 'First Term', data: revFirst, backgroundColor: '#4f7cff', borderRadius: 4 },
+                        { label: 'Second Term', data: revSecond, backgroundColor: '#7c5cfc', borderRadius: 4 },
+                        { label: 'Third Term', data: revThird, backgroundColor: '#00d4aa', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ctx.dataset.label + ': ₦' + ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2}); }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: function(v) { return '₦' + (v/1000).toFixed(0) + 'K'; } }
+                        }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // REGISTRATION TREND
+            // ──────────────────────────────────────────
+            const regLabels = []; const regFirst = []; const regSecond = []; const regThird = [];
+            const regData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.RegistrationTrend));
+            const regSessions = [...new Set(regData.map(r => r.SessionName))];
+            regSessions.forEach(s => {
+                const terms = regData.filter(r => r.SessionName === s);
+                regLabels.push(s);
+                regFirst.push((terms.find(t => t.Term === 'First') || {}).Count || 0);
+                regSecond.push((terms.find(t => t.Term === 'Second') || {}).Count || 0);
+                regThird.push((terms.find(t => t.Term === 'Third') || {}).Count || 0);
+            });
+
+            new Chart(document.getElementById('registrationChart'), {
+                type: 'bar',
+                data: {
+                    labels: regLabels,
+                    datasets: [
+                        { label: 'First Term', data: regFirst, backgroundColor: '#4f7cff', borderRadius: 4 },
+                        { label: 'Second Term', data: regSecond, backgroundColor: '#7c5cfc', borderRadius: 4 },
+                        { label: 'Third Term', data: regThird, backgroundColor: '#00d4aa', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // COMPULSORY COMPLIANCE
+            // ──────────────────────────────────────────
+            const compLabels = []; const compExpected = []; const compCollected = [];
+            const compData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.CompulsoryCompliance));
+            compData.forEach(c => {
+                compLabels.push(c.SessionName + ' ' + c.Term);
+                compExpected.push(c.Expected);
+                compCollected.push(c.Collected);
+            });
+
+            new Chart(document.getElementById('complianceChart'), {
+                type: 'bar',
+                data: {
+                    labels: compLabels,
+                    datasets: [
+                        { label: 'Expected', data: compExpected, backgroundColor: '#ff6b6b', borderRadius: 4 },
+                        { label: 'Collected', data: compCollected, backgroundColor: '#00d4aa', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ctx.dataset.label + ': ₦' + ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits:2}); }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { callback: function(v) { return '₦' + (v/1000).toFixed(0) + 'K'; } } }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // GENDER PIE
+            // ──────────────────────────────────────────
+            const genderData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.StudentDistribution.ByGender));
+            new Chart(document.getElementById('genderChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: genderData.map(g => g.Name + ' (' + g.Count + ')'),
+                    datasets: [{ data: genderData.map(g => g.Count), backgroundColor: ['#4f7cff', '#ff6b6b'], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
+                        title: { display: true, text: 'By Gender', font: { size: 11 }, padding: { bottom: 6 } }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // SECTION PIE
+            // ──────────────────────────────────────────
+            const sectionData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.StudentDistribution.BySection));
+            const sectionColors = ['#4f7cff', '#7c5cfc', '#00d4aa', '#ffa94d', '#ff6b6b', '#c084fc'];
+            new Chart(document.getElementById('sectionChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: sectionData.map(s => s.Name + ' (' + s.Count + ')'),
+                    datasets: [{ data: sectionData.map(s => s.Count), backgroundColor: sectionColors.slice(0, sectionData.length), borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } },
+                        title: { display: true, text: 'By Section', font: { size: 11 }, padding: { bottom: 6 } }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // PASS RATE BY TERM
+            // ──────────────────────────────────────────
+            const passData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.AcademicPerformance.PassRateByTerm));
+            new Chart(document.getElementById('passRateChart'), {
+                type: 'bar',
+                data: {
+                    labels: passData.map(p => p.Name),
+                    datasets: [{ label: 'Pass Rate %', data: passData.map(p => p.Count), backgroundColor: ['#4f7cff', '#7c5cfc', '#00d4aa'], borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } }
+                    }
+                }
+            });
+
+            // ──────────────────────────────────────────
+            // ADMISSION TREND
+            // ──────────────────────────────────────────
+            const admData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(d.AdmissionTrend));
+            new Chart(document.getElementById('admissionChart'), {
+                type: 'line',
+                data: {
+                    labels: admData.map(a => a.SessionName),
+                    datasets: [{ label: 'Admissions', data: admData.map(a => a.Count), borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,0.1)', fill: true, tension: 0.3, pointRadius: 3 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } }
+                    }
+                }
+            });
+        })();
+    </script>
+}

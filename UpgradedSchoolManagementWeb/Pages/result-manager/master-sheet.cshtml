@@ -1,0 +1,294 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.result_manager.master_sheetModel
+@{
+    ViewData["Title"] = "Annual Master Sheet";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<style>
+    .master-sheet-table {
+        font-size: 0.78rem;
+    }
+    .master-sheet-table th {
+        white-space: nowrap;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .master-sheet-table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .master-sheet-table .student-col {
+        text-align: left;
+        min-width: 180px;
+    }
+    .grade-badge {
+        display: inline-block;
+        min-width: 26px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.72rem;
+    }
+    .grade-a { background: #d1fae5; color: #065f46; }
+    .grade-b { background: #dbeafe; color: #1e40af; }
+    .grade-c { background: #fef9c3; color: #854d0e; }
+    .grade-d { background: #ffe4e6; color: #9f1239; }
+    .grade-e { background: #fce7f3; color: #831843; }
+    .grade-f { background: #fee2e2; color: #991b1b; }
+    .subject-group {
+        background: #1a2744;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+    }
+    .term-header {
+        background: #2c3e6b;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+    .annual-header {
+        background: #145a32;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+    }
+    .grade-header {
+        background: #6c3483;
+        color: #fff;
+        font-size: 0.65rem;
+        font-weight: 700;
+    }
+    .summary-header {
+        background: #111;
+        color: #fff;
+        font-weight: 700;
+    }
+    .action-header {
+        background: #c0392b;
+        color: #fff;
+    }
+    .dt-buttons {
+        margin-bottom: 0.5rem;
+    }
+    .master-sheet-wrapper {
+        overflow-x: auto;
+    }
+    .student-name-cell {
+        font-weight: 600;
+    }
+    .total-cell {
+        font-weight: 700;
+        background: #fef9e7;
+    }
+    .avg-cell {
+        font-weight: 600;
+    }
+    .position-cell {
+        font-weight: 600;
+    }
+</style>
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-file-spreadsheet me-2" style="color:var(--accent)"></i>Annual Master Sheet</div>
+            <div class="mgmt-sub">View consolidated annual academic performance across all terms</div>
+        </div>
+        <div>
+            <a asp-page="index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Results
+            </a>
+        </div>
+    </div>
+
+    <div class="mgmt-card mt-3">
+        <div class="mgmt-card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Session</label>
+                    <select asp-for="SessionId" asp-items="@Model.SelectionView.AcademicSession" class="form-select">
+                        <option value="">---Select Session---</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Class</label>
+                    <select asp-for="SchoolClassId" asp-items="@Model.SelectionView.SchoolClasses" class="form-select">
+                        <option value="">---Select Class---</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sub Class</label>
+                    <select asp-for="SubClassId" asp-items="@Model.SelectionView.SubClass" class="form-select">
+                        <option value="">---Select Sub Class---</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.HasData)
+    {
+        <div class="mgmt-card mt-3">
+            <div class="mgmt-card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                    <div>
+                        <strong>@Model.MasterSheet.ClassName - @Model.MasterSheet.SubClassName</strong>
+                        <span class="text-muted ms-2">@Model.MasterSheet.SessionName (Annual)</span>
+                        <span class="badge bg-secondary ms-2">@Model.MasterSheet.Rows.Count Student(s)</span>
+                        <span class="badge bg-info ms-1">@Model.MasterSheet.Subjects.Count Subject(s)</span>
+                    </div>
+                </div>
+
+                <div class="master-sheet-wrapper">
+                    <table id="masterSheetTable" class="table table-bordered table-sm master-sheet-table" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="vertical-align:middle;width:40px;">S/N</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:180px;">Student Name</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:100px;">Admission No</th>
+                                @foreach (var subject in Model.MasterSheet.Subjects)
+                                {
+                                    <th colspan="5" class="subject-group">@subject.SubjectName</th>
+                                }
+                                <th rowspan="2" style="vertical-align:middle;min-width:70px;" class="summary-header">Cumul.</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:60px;" class="summary-header">Avg</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:60px;" class="summary-header">Pos</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:50px;" class="summary-header">Grade</th>
+                                <th rowspan="2" style="vertical-align:middle;min-width:100px;" class="action-header">Action</th>
+                            </tr>
+                            <tr>
+                                @foreach (var subject in Model.MasterSheet.Subjects)
+                                {
+                                    <th class="term-header">1st</th>
+                                    <th class="term-header">2nd</th>
+                                    <th class="term-header">3rd</th>
+                                    <th class="annual-header">Annual</th>
+                                    <th class="grade-header">Grade</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var sn = 1;
+                            }
+                            @foreach (var row in Model.MasterSheet.Rows)
+                            {
+                                <tr>
+                                    <td>@(sn++)</td>
+                                    <td class="student-col student-name-cell">@row.StudentName</td>
+                                    <td>@row.AdmissionNumber</td>
+                                    @foreach (var subject in Model.MasterSheet.Subjects)
+                                    {
+                                        var sd = row.SubjectData.GetValueOrDefault(subject.SubjectId);
+                                        if (sd != null && sd.IsTaken)
+                                        {
+                                            <td>@(sd.Term1Total.HasValue ? sd.Term1Total.Value.ToString("0.#") : "-")</td>
+                                            <td>@(sd.Term2Total.HasValue ? sd.Term2Total.Value.ToString("0.#") : "-")</td>
+                                            <td>@(sd.Term3Total.HasValue ? sd.Term3Total.Value.ToString("0.#") : "-")</td>
+                                            <td class="total-cell">@sd.AnnualTotal.ToString("0.#")</td>
+                                            <td><span class="grade-badge grade-@sd.Grade.ToLower()">@sd.Grade</span></td>
+                                        }
+                                        else
+                                        {
+                                            <td class="text-muted">-</td>
+                                            <td class="text-muted">-</td>
+                                            <td class="text-muted">-</td>
+                                            <td class="total-cell text-muted">-</td>
+                                            <td class="text-muted">-</td>
+                                        }
+                                    }
+                                    <td class="total-cell">@row.CumulativeTotal.ToString("0.#")</td>
+                                    <td class="avg-cell">@row.OverallAverage.ToString("0.00")%</td>
+                                    <td class="position-cell">@row.Position</td>
+                                    <td><span class="grade-badge grade-@row.Grade.ToLower()">@row.Grade</span></td>
+                                    <td>
+                                        <a href="@Model.MasterSheet.AnnualReportUrlPrefix?studentId=@row.StudentId&sessionId=@Model.SessionId&classId=@Model.SchoolClassId&subClassId=@Model.SubClassId"
+                                           target="_blank" class="btn btn-sm btn-outline-primary" title="View Annual Result">
+                                            <i class="bi bi-file-text me-1"></i> Report
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.SessionId > 0 || Model.SchoolClassId > 0 || Model.SubClassId > 0)
+    {
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle me-2"></i>No records found for the selected criteria.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        $(function () {
+            $('#masterSheetTable').DataTable({
+                dom: "<'row mb-2'<'col-sm-6'B><'col-sm-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row mt-2'<'col-sm-4'l><'col-sm-4 text-center'i><'col-sm-4'p>>",
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="bi bi-file-earmark-excel me-1"></i> Export to Excel',
+                        className: 'btn btn-success btn-sm',
+                        title: 'Annual_Master_Sheet_@Model.MasterSheet.ClassName.Replace(" ", "_")',
+                        exportOptions: {
+                            columns: ':visible',
+                            format: {
+                                body: function (data, row, col, node) {
+                                    var html = $(node).html();
+                                    var text = $('<div>').html(html).text();
+                                    return text.trim();
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="bi bi-printer me-1"></i> Print',
+                        className: 'btn btn-secondary btn-sm',
+                        title: 'Annual Master Sheet - @Model.MasterSheet.ClassName',
+                        exportOptions: {
+                            columns: ':visible',
+                            format: {
+                                body: function (data, row, col, node) {
+                                    var html = $(node).html();
+                                    var text = $('<div>').html(html).text();
+                                    return text.trim();
+                                }
+                            }
+                        }
+                    }
+                ],
+                scrollX: true,
+                scrollCollapse: true,
+                paging: false,
+                ordering: true,
+                info: false,
+                searching: true,
+                orderCellsTop: true,
+                order: [[0, 'asc']],
+                language: {
+                    emptyTable: "No records found.",
+                    search: "Search:",
+                    searchPlaceholder: "Type to filter..."
+                }
+            });
+        });
+    </script>
+}

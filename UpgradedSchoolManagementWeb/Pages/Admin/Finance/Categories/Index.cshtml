@@ -1,0 +1,144 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Payment Categories";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-tags me-2" style="color:var(--accent)"></i>Payment Categories</div>
+            <div class="mgmt-sub">Manage fee categories under which payment items are grouped</div>
+        </div>
+        <a asp-page="Upsert" class="btn-mgmt-primary">
+            <i class="bi bi-plus-lg"></i> Add Category
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Categories</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="categoriesTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Items</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let categoriesTable;
+
+        $(document).ready(function () {
+            categoriesTable = $('#categoriesTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetPaymentCategories',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'name' },
+                    { data: 'description', render: function (d) { return d || '<span class="text-muted">&mdash;</span>'; } },
+                    { data: 'itemCount', width: '70px', className: 'text-center' },
+                    {
+                        data: 'isActive', width: '90px', className: 'text-center',
+                        render: function (d) {
+                            return d
+                                ? '<span class="badge bg-success">Active</span>'
+                                : '<span class="badge bg-secondary">Inactive</span>';
+                        }
+                    },
+                    { data: 'createdAt', width: '100px' },
+                    {
+                        data: 'id', orderable: false, width: '100px',
+                        render: function (data) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/Admin/Finance/Categories/Upsert?id=${data}"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="toggleStatus(${data})"><i class="bi bi-toggle-on"></i>Toggle Status</a></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+        });
+
+        function toggleStatus(id) {
+            $.ajax({
+                url: '/V1/TogglePaymentCategory',
+                type: 'POST',
+                data: JSON.stringify({ Id: id }),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({ icon: 'success', title: 'Updated', timer: 1500, showConfirmButton: false });
+                        categoriesTable.ajax.reload();
+                    } else {
+                        Swal.fire('Error', r.message || 'Operation failed', 'error');
+                    }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Category?',
+                text: 'Categories with linked payment items cannot be deleted.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeletePaymentCategory',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                categoriesTable.ajax.reload();
+                            } else {
+                                Swal.fire('Cannot Delete', r.message, 'error');
+                            }
+                        },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}

@@ -1,0 +1,72 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Roles.EditModel
+@{
+    ViewData["Title"] = "Edit Role";
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-shield-fill me-2" style="color:var(--accent)"></i>Edit Role</div>
+            <div class="mgmt-sub">Update role information</div>
+        </div>
+        <a class="btn-mgmt-secondary" href="/Admin/Roles">
+            <i class="bi bi-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form id="roleForm">
+                <input type="hidden" id="roleId" value="@Model.Id" />
+                <div class="mb-3">
+                    <label for="name" class="form-label">Role Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" value="@Model.Name" required />
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" rows="3">@Model.Description</textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle me-1"></i> Update Role
+                    </button>
+                    <a class="btn btn-secondary" href="/Admin/Roles">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $('#roleForm').on('submit', function (e) {
+            e.preventDefault();
+            var name = $('#name').val().trim();
+            if (!name) { Swal.fire('Validation', 'Role name is required', 'warning'); return; }
+            $.ajax({
+                url: '/V1/UpdateRole',
+                type: 'POST',
+                data: JSON.stringify({
+                    Id: $('#roleId').val(),
+                    Name: name,
+                    Description: $('#description').val().trim() || null
+                }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire('Success', r.message, 'success').then(function () {
+                            window.location.href = '/Admin/Roles';
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        });
+    </script>
+}

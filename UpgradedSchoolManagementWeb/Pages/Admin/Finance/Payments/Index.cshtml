@@ -1,0 +1,193 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments.IndexModel
+@{
+    ViewData["Title"] = "Student Payments";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-credit-card-2-front me-2" style="color:var(--accent)"></i>Student Payments</div>
+            <div class="mgmt-sub">View, verify, approve, or reject fee payments</div>
+        </div>
+        <a asp-page="Make" class="btn-mgmt-primary">
+            <i class="bi bi-plus-lg"></i> New Payment
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Payments</h6>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="form-label mb-0 text-nowrap small">Session:</label>
+                <select id="sessionFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Term:</label>
+                <select id="termFilter" class="form-select form-select-sm" style="width:110px">
+                    <option value="">All</option>
+                    <option value="1">First</option>
+                    <option value="2">Second</option>
+                    <option value="3">Third</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Class:</label>
+                <select id="classFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Status:</label>
+                <select id="statusFilter" class="form-select form-select-sm" style="width:110px">
+                    <option value="">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Reversed">Reversed</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">State:</label>
+                <select id="stateFilter" class="form-select form-select-sm" style="width:120px">
+                    <option value="">All</option>
+                    <option value="1">Pending</option>
+                    <option value="2">Approved</option>
+                    <option value="3">Rejected</option>
+                    <option value="4">Cancelled</option>
+                </select>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="paymentsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Reference</th>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Session</th>
+                            <th>Term</th>
+                            <th>Fees Amount</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>State</th>
+                            <th>Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let paymentsTable;
+
+        function loadFilters() {
+            $.get('/Home/GetAllClasses', function (data) {
+                var sel = $('#classFilter');
+                if (data && Array.isArray(data)) {
+                    data.forEach(function (c) {
+                        sel.append('<option value="' + c.id + '">' + c.name + '</option>');
+                    });
+                }
+            });
+
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    draw: 1, start: 0, length: 1000,
+                    search: { value: '', regex: false },
+                    order: [{ column: 0, dir: 'asc' }],
+                    columns: []
+                }),
+                success: function (r) {
+                    var sel = $('#sessionFilter');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+
+            paymentsTable = $('#paymentsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetPayments',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) {
+                        d.SessionFilter = $('#sessionFilter').val() ? parseInt($('#sessionFilter').val()) : null;
+                        d.TermFilter = $('#termFilter').val() ? parseInt($('#termFilter').val()) : null;
+                        d.ClassFilter = $('#classFilter').val() ? parseInt($('#classFilter').val()) : null;
+                        d.StatusFilter = $('#statusFilter').val() || null;
+                        d.StateFilter = $('#stateFilter').val() ? parseInt($('#stateFilter').val()) : null;
+                        return JSON.stringify(d);
+                    }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'reference' },
+                    {
+                        data: null, width: '100px', className: '',
+                        render: function (d) {
+                            return `<span class='badge bg-dark'>${d.studentName}</span> <br /> <span class='badge bg-secondary'>${d.admissionNo}</span> `;
+                        }
+                    },
+                    { data: 'className' },
+                    { data: 'sessionName' },
+                    { data: 'termName' },
+                    { data: 'fees' },
+                    { data: 'totalAmount' },
+                    {
+                        data: 'status', width: '100px', className: 'text-center',
+                        render: function (d) {
+                            var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
+                            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';
+                        }
+                    },
+                    {
+                        data: 'state', width: '100px', className: 'text-center',
+                        render: function (d) {
+                            var map = { Approved: 'success', Pending: 'warning text-dark', Rejected: 'danger', Cancelled: 'secondary' };
+                            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';
+                        }
+                    },
+                    { data: 'paymentDate', width: '110px' },
+                    {
+                        data: null, orderable: false, width: '80px',
+                        render: function (data, type, row) {
+                            //return '<a href="/Admin/Finance/Payments/Detail?id=' + data + '" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>';
+
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/Admin/Finance/Payments/Detail?id=${row.id}"><i class="bi bi-eye me-2"></i>View</a></li>
+                                    <li><a class="dropdown-item" target='_blank' href="/Admin/Finance/Payments/full-receipt/${row.termRegId}"><i class="bi bi-printer me-2"></i>Print Receipt</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[10, 'desc']]
+            });
+
+            $('#sessionFilter, #termFilter, #classFilter, #statusFilter, #stateFilter').on('change', function () {
+                paymentsTable.ajax.reload();
+            });
+        });
+    </script>
+}

@@ -1,0 +1,239 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Setup.IndexModel
+@{
+    ViewData["Title"] = "Payment Setup";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-gear-fill me-2" style="color:var(--accent)"></i>Payment Setup</div>
+            <div class="mgmt-sub">Configure fee amounts per item, session, term, and class</div>
+        </div>
+        <a asp-page="Upsert" class="btn-mgmt-primary">
+            <i class="bi bi-plus-lg"></i> Add Setup
+        </a>
+    </div>
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Error Alert -->
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Payment Setups</h6>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="form-label mb-0 text-nowrap small">Session:</label>
+                <select id="sessionFilter" class="form-select form-select-sm" style="width:150px">
+                    <option value="">All Sessions</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Term:</label>
+                <select id="termFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All Terms</option>
+                    <option value="1">First Term</option>
+                    <option value="2">Second Term</option>
+                    <option value="3">Third Term</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Class:</label>
+                <select id="classFilter" class="form-select form-select-sm" style="width:150px">
+                    <option value="">All Classes</option>
+                </select>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="setupsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Session</th>
+                            <th>Term</th>
+                            <th>Class</th>
+                            <th>Amount</th>
+                            <th>Compulsory</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <script>
+        let setupsTable;
+
+        function loadFilters() {
+            $.get('/Home/GetAllClasses', function (data) {
+                var sel = $('#classFilter');
+                if (data && Array.isArray(data)) {
+                    data.forEach(function (c) {
+                        sel.append('<option value="' + c.id + '">' + c.name + '</option>');
+                    });
+                }
+            });
+
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    draw: 1, start: 0, length: 1000,
+                    search: { value: '', regex: false },
+                    order: [{ column: 0, dir: 'asc' }],
+                    columns: []
+                }),
+                success: function (r) {
+                    var sel = $('#sessionFilter');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+
+            setupsTable = $('#setupsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetPaymentSetups',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) {
+                        d.SessionFilter = $('#sessionFilter').val() ? parseInt($('#sessionFilter').val()) : null;
+                        d.TermFilter = $('#termFilter').val() ? parseInt($('#termFilter').val()) : null;
+                        d.ClassFilter = $('#classFilter').val() ? parseInt($('#classFilter').val()) : null;
+                        return JSON.stringify(d);
+                    }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'paymentItemName' },
+                    { data: 'categoryName' },
+                    { data: 'sessionName' },
+                    { data: 'termName' },
+                    { data: 'className' },
+                    { data: 'amount' },
+                    {
+                        data: 'isCompulsory', width: '100px', className: 'text-center',
+                        render: function (d) {
+                            return d
+                                ? '<span class="badge bg-warning text-dark"><i class="bi bi-lock-fill me-1"></i>Compulsory</span>'
+                                : '<span class="badge bg-light text-muted">Optional</span>';
+                        }
+                    },
+                    {
+                        data: 'isActive', width: '80px', className: 'text-center',
+                        render: function (d) {
+                            return d
+                                ? '<span class="badge bg-success">Active</span>'
+                                : '<span class="badge bg-secondary">Inactive</span>';
+                        }
+                    },
+                    { data: 'createdAt', width: '100px' },
+                    {
+                        data: 'id', orderable: false, width: '100px',
+                        render: function (data) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/Admin/Finance/Setup/Upsert?id=${data}"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="toggleStatus(${data})"><i class="bi bi-toggle-on"></i>Toggle Status</a></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+
+            $('#sessionFilter, #termFilter, #classFilter').on('change', function () {
+                setupsTable.ajax.reload();
+            });
+        });
+
+        function toggleStatus(id) {
+            $.ajax({
+                url: '/V1/TogglePaymentSetup',
+                type: 'POST',
+                data: JSON.stringify({ Id: id }),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({ icon: 'success', title: 'Updated', timer: 1500, showConfirmButton: false });
+                        setupsTable.ajax.reload();
+                    } else {
+                        Swal.fire('Error', r.message || 'Operation failed', 'error');
+                    }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Setup?',
+                text: 'This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeletePaymentSetup',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                setupsTable.ajax.reload();
+                            } else {
+                                Swal.fire('Cannot Delete', r.message, 'error');
+                            }
+                        },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}

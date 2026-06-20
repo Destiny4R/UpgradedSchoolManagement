@@ -1,0 +1,245 @@
+﻿@page "{id}"
+@model UpgradedSchoolManagementWeb.Pages.result_manager.edit_resultModel
+@{
+    ViewData["Title"] = "Edit Result";
+}
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-pencil-square me-2" style="color:var(--accent)"></i>Edit Result</div>
+            <div class="mgmt-sub">Enter scores for each subject and assessment component</div>
+        </div>
+        <div>
+            <a asp-page="index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="mgmt-card mt-3">
+        <div class="mgmt-card-body">
+            <div class="row mb-4">
+                <div class="col-md-6 mt-3">
+                    <strong>Student:</strong> @Model.EditResult.StudentName
+                </div>
+                <div class="col-md-6 mt-3">
+                    <strong>Admission No:</strong> @Model.EditResult.AdmissionNumber
+                </div>
+                <div class="col-md-4 mt-3">
+                    <strong>Class:</strong> @Model.EditResult.ClassName
+                </div>
+                <div class="col-md-4 mt-3">
+                    <strong>Term:</strong> @Model.EditResult.Term
+                </div>
+                <div class="col-md-4 mt-3">
+                    <strong>Session:</strong> @Model.EditResult.Session
+                </div>
+            </div>
+
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-sm" id="resultTable">
+                        <thead class="table-primary">
+                            <tr>
+                                <th class="text-center" style="width:40px">S/N</th>
+                                <th>Subject</th>
+                                @foreach (var cfg in Model.EditResult.AssessmentConfigs)
+                                {
+                                    <th class="text-center" style="min-width:100px">
+                                        @cfg.AssessmentName
+                                        <br /><small class="text-muted">(Max: @cfg.AssessmentScore)</small>
+                                    </th>
+                                }
+                                <th class="text-center" style="min-width:80px">Total</th>
+                                <th class="text-center" style="min-width:60px">Grade</th>
+                                <th class="text-center" style="min-width:100px">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Subjects.Count; i++)
+                            {
+                                var subject = Model.EditResult.Subjects[i];
+                                <tr>
+                                    <td class="text-center">@(i + 1)</td>
+                                    <td>
+                                        @subject.SubjectName
+                                        <input type="hidden" asp-for="Subjects[i].ResultTableId" />
+                                        <input type="hidden" asp-for="Subjects[i].SubjectId" />
+                                    </td>
+                                    @{
+                                        var scoreValues = new[]
+                                        {
+                                            subject.ScoreOne,
+                                            subject.ScoreTwo,
+                                            subject.ScoreThree,
+                                            subject.ScoreFour,
+                                            subject.ScoreFive,
+                                            subject.ScoreSix
+                                        };
+                                        var scoreProps = new[] { "ScoreOne", "ScoreTwo", "ScoreThree", "ScoreFour", "ScoreFive", "ScoreSix" };
+                                    }
+                                    @for (int j = 0; j < Model.EditResult.AssessmentConfigs.Count && j < 6; j++)
+                                    {
+                                        var inputName = $"Subjects[{i}].{scoreProps[j]}";
+                                        var inputId = $"Subjects_{i}__{scoreProps[j]}";
+                                        var val = scoreValues[j];
+                                        <td class="text-center">
+                                            <input type="number"
+                                                   required
+                                                   name="@inputName"
+                                                   id="@inputId"
+                                                   class="form-control form-control-sm score-input text-center d-inline-block"
+                                                   style="width:80px"
+                                                   min="0"
+                                                   max="@Model.EditResult.AssessmentConfigs[j].AssessmentScore"
+                                                   step="0.5"
+                                                   data-max="@Model.EditResult.AssessmentConfigs[j].AssessmentScore"
+                                                   data-index="@j"
+                                                   data-row="@i"
+                                                   value="@(val.HasValue ? val.Value.ToString("0.#") : "")" />
+                                        </td>
+                                    }
+                                    <td class="text-center fw-bold total-cell">@subject.TotalScore</td>
+                                    <td class="text-center grade-cell">@subject.Grade</td>
+                                    <td class="text-center remark-cell">@subject.Remark</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check2-circle me-2"></i>Submit Results
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        (function () {
+            const gradeRemarks = [
+                { min: 75, grade: 'A', remark: 'Distinction' },
+                { min: 65, grade: 'B', remark: 'Very Good' },
+                { min: 55, grade: 'C', remark: 'Good' },
+                { min: 40, grade: 'D', remark: 'Fair' },
+                { min: 0, grade: 'E', remark: 'Poor' }
+            ];
+
+            function getGradeAndRemark(total) {
+                for (var i = 0; i < gradeRemarks.length; i++) {
+                    if (total >= gradeRemarks[i].min) {
+                        return gradeRemarks[i];
+                    }
+                }
+                return gradeRemarks[gradeRemarks.length - 1];
+            }
+
+            var table = document.getElementById('resultTable');
+            if (!table) return;
+
+            var inputs = table.querySelectorAll('.score-input');
+
+            function updateRow(rowIndex) {
+                var row = table.querySelectorAll('tbody tr')[rowIndex];
+                if (!row) return;
+
+                var rowInputs = row.querySelectorAll('.score-input');
+                var total = 0;
+
+                rowInputs.forEach(function (inp) {
+                    var val = parseFloat(inp.value);
+                    if (!isNaN(val)) {
+                        total += val;
+                    }
+                });
+
+                var totalCell = row.querySelector('.total-cell');
+                var gradeCell = row.querySelector('.grade-cell');
+                var remarkCell = row.querySelector('.remark-cell');
+
+                if (totalCell) totalCell.textContent = total.toFixed(1).replace(/\.0$/, '');
+                var gr = getGradeAndRemark(total);
+                if (gradeCell) gradeCell.textContent = gr.grade;
+                if (remarkCell) remarkCell.textContent = gr.remark;
+            }
+
+            var headerCells = table.querySelectorAll('thead tr th');
+
+            var debounceTimers = {};
+
+            inputs.forEach(function (inp) {
+                inp.addEventListener('input', function () {
+                    var max = parseFloat(this.getAttribute('data-max'));
+                    var val = parseFloat(this.value);
+                    var rowAttr = this.getAttribute('data-row');
+                    var colIndex = parseInt(this.getAttribute('data-index'));
+
+                    if (this.value === '') {
+                        this.value = '0';
+                        val = 0;
+                    }
+
+                    if (!isNaN(val) && val > max) {
+                        this.value = max;
+                        var assessmentName = '';
+                        var headerIndex = colIndex + 2;
+                        if (headerCells[headerIndex]) {
+                            assessmentName = headerCells[headerIndex].textContent.trim().replace(/\(Max:.*\)/, '').trim();
+                        }
+                        var rowIndex = parseInt(rowAttr);
+                        var subjectCell = table.querySelectorAll('tbody tr')[rowIndex]?.querySelector('td:nth-child(2)');
+                        var subjectName = subjectCell ? subjectCell.textContent.trim() : '';
+
+                        if (debounceTimers[this.id]) {
+                            clearTimeout(debounceTimers[this.id]);
+                        }
+                        debounceTimers[this.id] = setTimeout(function (name, subj, maxVal) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Score Exceeded',
+                                text: name + ' score for ' + subj + ' cannot exceed ' + maxVal + '.',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        }.bind(null, assessmentName, subjectName, max), 300);
+                    }
+
+                    if (!isNaN(val) && val < 0) {
+                        this.value = 0;
+                    }
+
+                    if (rowAttr !== null) {
+                        updateRow(parseInt(rowAttr));
+                    }
+                });
+            });
+
+            for (var r = 0; r < inputs.length; r++) {
+                var rowAttr = inputs[r].getAttribute('data-row');
+                if (rowAttr !== null) {
+                    updateRow(parseInt(rowAttr));
+                }
+            }
+        })();
+    </script>
+}

@@ -1,0 +1,752 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config.indexModel
+@{
+    ViewData["Title"] = "Manage Result Configuration";
+}
+
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/multiple-select/dist/multiple-select.min.css" rel="stylesheet" />
+    <link href="~/lib/multiple-select/dist/themes/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <style>
+        /* ── Score-total badge ─────────────────────────────────────── */
+        #scoreTotalBadge {
+            font-size: .85rem;
+            font-weight: 600;
+            padding: .35rem .75rem;
+            border-radius: .5rem;
+            transition: background .25s, color .25s;
+        }
+        #scoreTotalBadge.ok  { background: #d1fae5; color: #065f46; }
+        #scoreTotalBadge.warn{ background: #fef3c7; color: #92400e; }
+        #scoreTotalBadge.bad { background: #fee2e2; color: #991b1b; }
+
+        /* ── Assessment table inside modal ─────────────────────────── */
+        #assessmentTableBody td { vertical-align: middle; }
+        .class-filter-btn        { cursor: pointer; }
+        .class-group-row td      { font-weight: 600; background: #f8fafc;
+                                   color: var(--accent2, #6366f1); }
+    </style>
+}
+
+<div class="mgmt-page">
+
+    @* ── Page header ── *@
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi bi-journal-bookmark-fill me-2" style="color:var(--accent)"></i>
+                Result Configuration
+            </div>
+            <div class="mgmt-sub">Configure per-class assessment breakdowns (Class Work, Home Work, Exam…)</div>
+        </div>
+        <button class="btn-mgmt-primary" id="btnOpenModal"
+                data-bs-toggle="modal" data-bs-target="#resultConfigModal">
+            <i class="bi bi-plus-lg"></i> Configure Class
+        </button>
+        <a asp-page="/Admin/Academic/TerminalSkills/Index" class="btn-mgmt-secondary">
+            <i class="bi bi-stars"></i> Terminal Skills
+        </a>
+    </div>
+
+    @* ── Class filter pills ── *@
+    <div class="mgmt-card fade-in mb-0">
+        <div class="mgmt-card-head d-flex align-items-center gap-2 flex-wrap">
+            <h6 class="mb-0">
+                <i class="bi bi-funnel me-2" style="color:var(--accent2)"></i>Filter by Class
+            </h6>
+            <button class="btn btn-sm btn-outline-secondary class-filter-btn active"
+                    id="filterAll" data-class-id="0">All Classes</button>
+            @foreach (var cls in Model.SelectionViewModal.SchoolClasses)
+            {
+                <button class="btn btn-sm btn-outline-secondary class-filter-btn"
+                        data-class-id="@cls.Value">@cls.Text</button>
+            }
+        </div>
+    </div>
+
+    @* ── DataTable ── *@
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6>
+                <i class="bi bi-table me-2" style="color:var(--accent2)"></i>
+                Assessment Configurations
+            </h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="configTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Class</th>
+                            <th>Assessment Name</th>
+                            <th>Max Score</th>
+                            <th>Display Order</th>
+                            <th>Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ════════════════════════════════════════════════════════════════ *@
+@* MODAL — Add / Edit Assessment Configuration                      *@
+@* ════════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="resultConfigModal" tabindex="-1"
+     aria-labelledby="resultConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header text-white">
+                <h5 class="modal-title" id="resultConfigModalLabel">
+                    <i class="bi bi-file-earmark-ruled me-2"></i>
+                    Result Configuration — <span id="modalSubtitle">Add New</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                @* Info notice *@
+                <div class="alert alert-info py-2">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    The <strong>Display Order</strong> controls the column sequence on the result sheet —
+                    e.g. Class Work <em>1</em>, Home Work <em>2</em>, Test <em>3</em>, Exam <em>4</em>.
+                </div>
+
+                @* Score total indicator *@
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="text-muted small">Assessment total:</span>
+                    <span id="scoreTotalBadge" class="warn">0 / 100</span>
+                    <span id="scoreTotalHint" class="text-muted small">(should equal 100)</span>
+                </div>
+
+                @* Class selector *@
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Class(es) <span class="text-danger">*</span>
+                    </label>
+                    <select id="batchClass" multiple="multiple"
+                            class="form-control ms-dropdown ms-dropdown-divider"
+                            asp-items="@Model.SelectionViewModal.SchoolClasses"
+                            placeholder="--- Select Classes ---">
+                    </select>
+                    <div class="form-text">
+                        Selecting multiple classes applies the <em>same</em> assessment set to all of them.
+                    </div>
+                </div>
+
+                @* Assessment rows table *@
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:35%">Assessment Name</th>
+                                <th style="width:20%">Max Score</th>
+                                <th style="width:20%">Display Order</th>
+                                <th style="width:25%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assessmentTableBody"></tbody>
+                    </table>
+                </div>
+
+                <button class="btn btn-success btn-sm mt-1" type="button" id="btnAddAssessment">
+                    <i class="bi bi-plus-square me-1"></i>Add Row
+                </button>
+
+                @* Quick-fill presets *@
+                <div class="mt-3">
+                    <span class="text-muted small me-2">Quick presets:</span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                            id="presetNursery">Nursery</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1"
+                            id="presetPrimary">Primary</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            id="presetSecondary">Secondary</button>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="btnSubmitConfig">
+                    <i class="bi bi-floppy me-1"></i>Save Configuration
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════════ *@
+@* MODAL — View / manage one class's existing configs              *@
+@* ════════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="viewConfigModal" tabindex="-1"
+     aria-labelledby="viewConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header text-white">
+                <h5 class="modal-title" id="viewConfigModalLabel">
+                    <i class="bi bi-eye me-2"></i>
+                    Current Config — <span id="viewConfigClassName"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Assessment Name</th>
+                            <th>Max Score</th>
+                            <th>Display Order</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="viewConfigBody"></tbody>
+                    <tfoot>
+                        <tr class="table-secondary fw-semibold">
+                            <td colspan="2" class="text-end">Total:</td>
+                            <td id="viewConfigTotal"></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger btn-sm" id="btnDeleteAll">
+                    <i class="bi bi-trash me-1"></i>Remove All &amp; Reconfigure
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script src="~/lib/multiple-select/dist/multiple-select.min.js"></script>
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+    // ════════════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ════════════════════════════════════════════════════════════════════
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    function getHeaders() {
+        return { 'Content-Type': 'application/json', 'RequestVerificationToken': token };
+    }
+
+    async function postJson(url, body) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    // ── SweetAlert2 toast helper ───────────────────────────────────────
+    const SwalToast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+
+    function toast(msg, ok = true) {
+        SwalToast.fire({
+            icon: ok ? 'success' : 'error',
+            title: msg
+        });
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // MULTIPLE SELECT — class picker
+    // ════════════════════════════════════════════════════════════════════
+    $('#batchClass').multipleSelect({
+        displayDelimiter: ' | ',
+        displayTitle: true,
+        openOnHover: false,
+        placeholder: '--- Select Classes ---'
+    });
+
+    // Reset modal when it opens fresh (not from "edit" path)
+    $('#btnOpenModal').on('click', function () {
+        $('#modalSubtitle').text('Add New');
+        $('#batchClass').multipleSelect('setSelects', []);
+        clearAssessmentRows();
+        updateScoreTotal();
+    });
+
+    // ════════════════════════════════════════════════════════════════════
+    // ASSESSMENT ROWS — add / remove / re-index
+    // ════════════════════════════════════════════════════════════════════
+    const MAX_ROWS = 8;
+    let rowIndex   = 0;
+
+    function buildRow(idx, name = '', score = '', order = '') {
+        return `
+        <tr id="arow_${idx}">
+            <td>
+                <input type="text" class="form-control form-control-sm assessment-name"
+                       placeholder="e.g. Class Work" value="${name}" required />
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm assessment-score"
+                       placeholder="e.g. 10" min="1" max="100"
+                       value="${score}" required />
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm assessment-order"
+                       placeholder="e.g. 1" min="1"
+                       value="${order}" required />
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remove-row"
+                        data-idx="${idx}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }
+
+    function clearAssessmentRows() {
+        $('#assessmentTableBody').empty();
+        rowIndex = 0;
+        $('#btnAddAssessment').prop('disabled', false)
+            .html('<i class="bi bi-plus-square me-1"></i>Add Row');
+    }
+
+    function reindexRows() {
+        $('#assessmentTableBody tr').each(function (i) {
+            $(this).attr('id', `arow_${i}`);
+            $(this).find('.remove-row').attr('data-idx', i);
+        });
+        rowIndex = $('#assessmentTableBody tr').length;
+    }
+
+    function updateScoreTotal() {
+        let total = 0;
+        $('.assessment-score').each(function () {
+            const v = parseFloat($(this).val()) || 0;
+            total += v;
+        });
+        const badge = document.getElementById('scoreTotalBadge');
+        badge.textContent = `${total} / 100`;
+        badge.className = '';
+        if (total === 100)      badge.classList.add('ok');
+        else if (total < 100)   badge.classList.add('warn');
+        else                    badge.classList.add('bad');
+    }
+
+    $('#btnAddAssessment').on('click', function () {
+        if ($('#assessmentTableBody tr').length >= MAX_ROWS) {
+            toast(`Maximum of ${MAX_ROWS} assessments allowed.`, false);
+            return;
+        }
+        $('#assessmentTableBody').append(buildRow(rowIndex++));
+        reindexRows();
+        if ($('#assessmentTableBody tr').length >= MAX_ROWS) {
+            $(this).prop('disabled', true).html('<i class="bi bi-slash-circle me-1"></i>Max Reached');
+        }
+        updateScoreTotal();
+    });
+
+    $(document).on('click', '.remove-row', function () {
+        $(`#arow_${$(this).data('idx')}`).remove();
+        reindexRows();
+        $('#btnAddAssessment').prop('disabled', false)
+            .html('<i class="bi bi-plus-square me-1"></i>Add Row');
+        updateScoreTotal();
+    });
+
+    $(document).on('input', '.assessment-score', updateScoreTotal);
+
+    // ════════════════════════════════════════════════════════════════════
+    // PRESETS
+    // ════════════════════════════════════════════════════════════════════
+    const presets = {
+        nursery:   [
+            { name: 'Class Work', score: 10, order: 1 },
+            { name: 'Home Work',  score: 10, order: 2 },
+            { name: 'Test',       score: 20, order: 3 },
+            { name: 'Examination',score: 60, order: 4 }
+        ],
+        primary:   [
+            { name: 'Class Work', score: 5,  order: 1 },
+            { name: 'Home Work',  score: 10, order: 2 },
+            { name: 'Test',       score: 10, order: 3 },
+            { name: 'Project',    score: 5,  order: 4 },
+            { name: 'Examination',score: 70, order: 5 }
+        ],
+        secondary: [
+            { name: 'Class Work', score: 5,  order: 1 },
+            { name: 'Test',       score: 15, order: 2 },
+            { name: 'Examination',score: 80, order: 3 }
+        ]
+    };
+
+    function applyPreset(key) {
+        clearAssessmentRows();
+        presets[key].forEach(p => {
+            $('#assessmentTableBody').append(buildRow(rowIndex++, p.name, p.score, p.order));
+        });
+        reindexRows();
+        updateScoreTotal();
+    }
+
+    $('#presetNursery').on('click',   () => applyPreset('nursery'));
+    $('#presetPrimary').on('click',   () => applyPreset('primary'));
+    $('#presetSecondary').on('click', () => applyPreset('secondary'));
+
+    // ════════════════════════════════════════════════════════════════════
+    // SUBMIT — save configuration
+    // ════════════════════════════════════════════════════════════════════
+    $('#btnSubmitConfig').on('click', async function () {
+        const btn = $(this);
+
+        const selectedClasses = $('#batchClass').multipleSelect('getSelects');
+        if (!selectedClasses || selectedClasses.length === 0) {
+            toast('Please select at least one class.', false); return;
+        }
+
+        const rows = [];
+        let valid  = true;
+        $('#assessmentTableBody tr').each(function (i) {
+            const name  = $(this).find('.assessment-name').val().trim();
+            const score = parseFloat($(this).find('.assessment-score').val());
+            const order = parseInt($(this).find('.assessment-order').val());
+            if (!name || isNaN(score) || isNaN(order)) { valid = false; return false; }
+            rows.push({ name, score, order });
+        });
+
+        if (rows.length === 0) {
+            toast('Please add at least one assessment row.', false); return;
+        }
+        if (!valid) {
+            toast('Fill in all assessment fields before saving.', false); return;
+        }
+
+        btn.prop('disabled', true).html('<i class="bi bi-hourglass-split me-1"></i>Saving…');
+
+        const payload = {
+            schoolClassIds: selectedClasses.map(Number),
+            assessments:    rows
+        };
+
+        const data = await postJson('?handler=SaveConfig', payload);
+        btn.prop('disabled', false).html('<i class="bi bi-floppy me-1"></i>Save Configuration');
+
+        toast(data.message, data.success);
+        if (data.success) {
+            $('#resultConfigModal').modal('hide');
+            configTable.ajax.reload(null, false);
+        }
+    });
+
+    // ════════════════════════════════════════════════════════════════════
+    // DATATABLE — assessment configs grid
+    // ════════════════════════════════════════════════════════════════════
+    let currentClassFilter = 0;
+
+    const configTable = $('#configTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: function (data, callback, settings) {
+            $.ajax({
+                url: `?handler=DataTable&classId=${currentClassFilter}`,
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': token },
+                data: JSON.stringify(data),
+                success: callback,
+                error: function () {
+                    callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [] });
+                }
+            });
+        },
+        columns: [
+            { data: null, orderable: false, render: (d, t, r, m) => m.row + 1 },
+            { data: 'className' },
+            { data: 'assessmentName' },
+            { data: 'assessmentScore',
+              render: v => `<span class="badge bg-primary">${v}</span>` },
+            { data: 'displayOrder',
+              render: v => `<span class="badge bg-secondary">${v}</span>` },
+            { data: 'createdDate',
+              render: v => v ? new Date(v).toLocaleDateString('en-NG') : '—' },
+            {
+                data: null, orderable: false, className: 'text-center',
+                render: (d, t, r) => `
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li>
+                                <button class="dropdown-item btn-edit-single"
+                                        data-id="${r.id}"
+                                        data-name="${r.assessmentName}"
+                                        data-score="${r.assessmentScore}"
+                                        data-order="${r.displayOrder}">
+                                    <i class="bi bi-pencil-square me-2 text-primary"></i>Edit Assessment
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item btn-edit-class"
+                                        data-class-id="${r.schoolClassId}"
+                                        data-class-name="${r.className}">
+                                    <i class="bi bi-pencil me-2 text-warning"></i>Edit Class Config
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item btn-view-class"
+                                        data-class-id="${r.schoolClassId}"
+                                        data-class-name="${r.className}">
+                                    <i class="bi bi-eye me-2 text-info"></i>View Class Config
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger btn-delete-config"
+                                        data-id="${r.id}">
+                                    <i class="bi bi-trash me-2"></i>Delete Assessment
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item text-danger btn-delete-all-class"
+                                        data-class-id="${r.schoolClassId}"
+                                        data-class-name="${r.className}">
+                                    <i class="bi bi-trash3 me-2"></i>Remove All &amp; Reconfigure
+                                </button>
+                            </li>
+                        </ul>
+                    </div>`
+            }
+        ],
+        pageLength: 10,//10 should be the default
+        responsive: true,
+        language: { processing: '<i class="bi bi-arrow-repeat"></i> Loading…' }
+    });
+
+    // ── Class filter pills ─────────────────────────────────────────────
+    $(document).on('click', '.class-filter-btn', function () {
+        $('.class-filter-btn').removeClass('active');
+        $(this).addClass('active');
+        currentClassFilter = parseInt($(this).data('class-id'));
+        configTable.ajax.reload(null, false);
+    });
+
+    // ── Edit single assessment (SweetAlert2 form) ─────────────────────
+    $(document).on('click', '.btn-edit-single', async function () {
+        const id    = parseInt($(this).data('id'));
+        const name  = $(this).data('name');
+        const score = $(this).data('score');
+        const order = $(this).data('order');
+
+        const { value: formValues, isConfirmed } = await Swal.fire({
+            title: '<i class="bi bi-pencil-square me-2"></i>Edit Assessment',
+            html: `
+                <div class="text-start">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Assessment Name <span class="text-danger">*</span></label>
+                        <input id="swal-name" class="form-control" value="${name}" placeholder="e.g. Class Work" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Max Score <span class="text-danger">*</span></label>
+                        <input id="swal-score" type="number" class="form-control" value="${score}" min="1" max="100" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Display Order <span class="text-danger">*</span></label>
+                        <input id="swal-order" type="number" class="form-control" value="${order}" min="1" />
+                    </div>
+                </div>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-floppy me-1"></i> Save',
+            cancelButtonText:  'Cancel',
+            preConfirm: () => {
+                const n = document.getElementById('swal-name').value.trim();
+                const s = parseFloat(document.getElementById('swal-score').value);
+                const o = parseInt(document.getElementById('swal-order').value);
+                if (!n)           { Swal.showValidationMessage('Assessment name is required.');   return false; }
+                if (isNaN(s)||s<=0){ Swal.showValidationMessage('Max score must be greater than 0.'); return false; }
+                if (isNaN(o)||o<=0){ Swal.showValidationMessage('Display order must be greater than 0.'); return false; }
+                return { name: n, score: s, displayOrder: o };
+            }
+        });
+
+        if (!isConfirmed || !formValues) return;
+
+        const data = await postJson('?handler=UpdateSingleConfig', { id, ...formValues });
+        toast(data.message, data.success);
+        if (data.success) configTable.ajax.reload(null, false);
+    });
+
+    // ── Edit all assessments for a class (pre-populate resultConfigModal) ─
+    $(document).on('click', '.btn-edit-class', async function () {
+        const classId   = parseInt($(this).data('class-id'));
+        const className = $(this).data('class-name');
+
+        // Load existing configs
+        const res  = await fetch(`?handler=ConfigsByClass&classId=${classId}`);
+        const data = await res.json();
+
+        if (!data.success) { toast(data.message || 'Failed to load configurations.', false); return; }
+
+        // Set modal subtitle and lock the class selector to this class only
+        $('#modalSubtitle').text(`Edit — ${className}`);
+        $('#batchClass').multipleSelect('setSelects', [classId.toString()]);
+        // Disable the selector so the user cannot change the class while editing
+        $('#batchClass').multipleSelect('disable');
+
+        // Pre-populate assessment rows
+        clearAssessmentRows();
+        if (data.data && data.data.length) {
+            data.data.forEach(c => {
+                $('#assessmentTableBody').append(buildRow(rowIndex++, c.assessmentName, c.assessmentScore, c.displayOrder));
+            });
+            reindexRows();
+        }
+        updateScoreTotal();
+
+        // Open the modal
+        $('#resultConfigModal').modal('show');
+    });
+
+    // Re-enable the class selector when the modal is fully hidden
+    // so the "Add New" flow works normally next time
+    $('#resultConfigModal').on('hidden.bs.modal', function () {
+        $('#batchClass').multipleSelect('enable');
+    });
+
+    // ── Delete single config row ───────────────────────────────────────
+    $(document).on('click', '.btn-delete-config', async function () {
+        const confirmed = await Swal.fire({
+            title: 'Delete Configuration?',
+            text: 'This assessment configuration will be permanently removed.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-trash me-1"></i> Yes, delete it',
+            cancelButtonText: 'Cancel'
+        });
+        if (!confirmed.isConfirmed) return;
+        const id   = parseInt($(this).data('id'));
+        const data = await postJson('?handler=DeleteConfig', { id });
+        toast(data.message, data.success);
+        if (data.success) configTable.ajax.reload(null, false);
+    });
+
+    // ── View all configs for a class ───────────────────────────────────
+    $(document).on('click', '.btn-view-class', async function () {
+        const classId   = parseInt($(this).data('class-id'));
+        const className = $(this).data('class-name');
+
+        $('#viewConfigClassName').text(className);
+        $('#viewConfigBody').html('<tr><td colspan="5" class="text-center"><i class="bi bi-arrow-repeat"></i> Loading…</td></tr>');
+        $('#btnDeleteAll').data('class-id', classId);
+
+        $('#viewConfigModal').modal('show');
+
+        const res = await fetch(`?handler=ConfigsByClass&classId=${classId}`);
+        const data = await res.json();
+
+        if (!data.success || !data.data?.length) {
+            $('#viewConfigBody').html('<tr><td colspan="5" class="text-center text-muted">No configurations found.</td></tr>');
+            $('#viewConfigTotal').text('—');
+            return;
+        }
+
+        let total = 0;
+        const rows = data.data.map((c, i) => {
+            total += c.assessmentScore;
+            return `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${c.assessmentName}</td>
+                <td><span class="badge bg-primary">${c.assessmentScore}</span></td>
+                <td><span class="badge bg-secondary">${c.displayOrder}</span></td>
+                <td>
+                    <button class="btn btn-danger btn-sm btn-delete-config" data-id="${c.id}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        $('#viewConfigBody').html(rows);
+        const cls = total === 100 ? 'text-success' : 'text-warning';
+        $('#viewConfigTotal').html(`<span class="${cls} fw-bold">${total}</span>`);
+    });
+
+    // ── Delete ALL configs for a class (from dropdown) ─────────────────
+    $(document).on('click', '.btn-delete-all-class', async function () {
+        const classId   = parseInt($(this).data('class-id'));
+        const className = $(this).data('class-name');
+        const confirmed = await Swal.fire({
+            title: `Remove All for ${className}?`,
+            text: 'This will permanently delete ALL assessment configurations for this class. This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-trash3 me-1"></i> Yes, remove all',
+            cancelButtonText: 'Cancel',
+            focusCancel: true
+        });
+        if (!confirmed.isConfirmed) return;
+        const data = await postJson('?handler=DeleteAllConfigs', { id: classId });
+        toast(data.message, data.success);
+        if (data.success) configTable.ajax.reload(null, false);
+    });
+
+    // ── Delete ALL configs for a class (from viewConfigModal) ──────────
+    $('#btnDeleteAll').on('click', async function () {
+        const classId = parseInt($(this).data('class-id'));
+        const confirmed = await Swal.fire({
+            title: 'Remove All Configurations?',
+            text: 'This will permanently delete ALL assessment configurations for this class. This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-trash me-1"></i> Yes, remove all',
+            cancelButtonText: 'Cancel',
+            focusCancel: true
+        });
+        if (!confirmed.isConfirmed) return;
+
+        const data = await postJson('?handler=DeleteAllConfigs', { id: classId });
+        toast(data.message, data.success);
+        if (data.success) {
+            $('#viewConfigModal').modal('hide');
+            configTable.ajax.reload(null, false);
+        }
+    });
+    </script>
+}

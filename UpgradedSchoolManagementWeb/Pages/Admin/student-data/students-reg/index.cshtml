@@ -1,0 +1,468 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg.indexModel
+@{
+    ViewData["Title"] = "Students";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/jquery-multiselect-master/jquery.multiselect.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-people-fill me-2" style="color:var(--accent)"></i>Termly Registration</div>
+            <div class="mgmt-sub">Manage students term registrations</div>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" id="btnDeleteSelected" class="btn btn-outline-danger" style="display:none;">
+                <i class="bi bi-trash-fill me-1"></i> Delete Selected
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#batchExcelModal">
+                <i class="bi bi-file-earmark-excel me-1"></i> Excel Upload
+            </button>
+            <a asp-page="batch-registration" class="btn btn-outline-primary">Batch Registration</a>
+            <a asp-page="upsert" class="btn btn-outline-primary">Single Registration</a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Error Alert -->
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label for="term" class="form-label">Term</label>
+            <select class="form-select" id="term" asp-items="@Model.SelectionViewModal.Terms">
+                <option value="">---Select Term---</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="session" class="form-label">Academic Session</label>
+            <select class="form-select" id="session" asp-items="@Model.SelectionViewModal.AcademicSession">
+                <option value="">---Select Session---</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="schoolclass" class="form-label">Class</label>
+            <select class="form-select" id="schoolclass" asp-items="@Model.SelectionViewModal.SchoolClasses">
+                <option value="">---Select Class---</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="subclass" class="form-label">Sub Class</label>
+            <select class="form-select" id="subclass" asp-items="@Model.SelectionViewModal.SubClass">
+                <option value="">---Select Sub Class---</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Students</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="studentsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">
+                                <input type="checkbox" id="selectAll" class="form-check-input" title="Select All" />
+                            </th>
+                            <th>#</th>
+                            <th>Full Name</th>
+                            <th>Reg. Number</th>
+                            <th>Term</th>
+                            <th>Session</th>
+                            <th>Class</th>
+                            <th>No. Subjects</th>
+                            <th>Created Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Batch Excel Upload Modal -->
+<div class="modal fade" id="batchExcelModal" tabindex="-1" aria-labelledby="batchExcelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header new-bg-background  text-white">
+                <h5 class="modal-title" id="batchExcelModalLabel">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Batch Registration via Excel Upload
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Upload an Excel file containing <strong>only student registration numbers</strong> (one per row in the first column).
+                    All students will be registered into the selected Term, Session, Class, and Sub-Class.
+                </div>
+                <form id="batchExcelForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="batchSession" class="form-label">Academic Session <span class="text-danger">*</span></label>
+                            <select class="form-select" id="batchSession" required asp-items="@Model.SelectionViewModal.AcademicSession">
+                                <option value="">---Select Session---</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="batchTerm" class="form-label">Term <span class="text-danger">*</span></label>
+                            <select class="form-select" id="batchTerm" required asp-items="@Model.SelectionViewModal.Terms">
+                                <option value="">---Select Term---</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="batchClass" class="form-label">Class <span class="text-danger">*</span></label>
+                            <select class="form-select" id="batchClass" required asp-items="@Model.SelectionViewModal.SchoolClasses">
+                                <option value="">---Select Class---</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="batchSubClass" class="form-label">Sub Class <span class="text-danger">*</span></label>
+                            <select class="form-select" id="batchSubClass" required asp-items="@Model.SelectionViewModal.SubClass">
+                                <option value="">---Select Sub Class---</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="batchSubjects" class="form-label">Subjects (Optional)</label>
+                            <select class="form-select" id="batchSubjects" multiple asp-items="@Model.SelectionViewModal.Subjects">
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="batchExcelFile" class="form-label">Excel File (.xlsx) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="batchExcelFile" accept=".xlsx,.xls" required />
+                            <div class="form-text">The file should contain student registration numbers in the first column.</div>
+                        </div>
+                    </div>
+                </form>
+                <!-- Results Container (hidden by default) -->
+                <div id="batchResultsContainer" class="mt-3" style="display:none;">
+                    <hr />
+                    <h6><i class="bi bi-clipboard-data me-2"></i>Registration Results</h6>
+                    <div id="batchResultsSummary"></div>
+                    <div id="batchResultsErrors" class="mt-2" style="display:none;">
+                        <p class="text-danger fw-bold mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Failed Registrations:</p>
+                        <div id="batchErrorsList" class="small" style="max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Close
+                </button>
+                <button type="button" class="btn btn-success" id="btnSubmitBatchExcel">
+                    <i class="bi bi-upload me-1"></i>Upload & Register
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script src="~/lib/jquery-multiselect-master/jquery.multiselect.js"></script>
+    <script>
+
+        let studentsTable;
+
+        $(document).ready(function () {
+            studentsTable = $('#studentsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetTermRegistrations',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) {
+                        d.termFilter = $('#term').val() ? parseInt($('#term').val()) : null;
+                        d.sessionFilter = $('#session').val() ? parseInt($('#session').val()) : null;
+                        d.classFilter = $('#schoolclass').val() ? parseInt($('#schoolclass').val()) : null;
+                        d.subclassFilter = $('#subclass').val() ? parseInt($('#subclass').val()) : null;
+                        return JSON.stringify(d);
+                    }
+                },
+                columns: [
+                    {
+                        data: 'id',
+                        orderable: false,
+                        render: function (data, type, row) {
+                            return `<input type="checkbox" class="form-check-input row-checkbox" value="${data}" data-hasresults="${row.hasRecordedResults}" />`;
+                        }
+                    },
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false },
+                    { data: 'fullName' },
+                    { data: 'regNumber' },
+                    { data: 'term' },
+                    { data: 'session' },
+                    { data: 'schoolClass' },
+                    { data: 'noOfSubjects' },
+                    { 
+                        data: 'createdDate',
+                        render: function(data) {
+                            return new Date(data).toLocaleDateString();
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        render: function (data, type, row) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/Admin/student-data/students-reg/upsert?id=${data}"><i class="bi bi-pencil-square me-2"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(${data}, ${row.hasRecordedResults})"><i class="bi bi-trash3 me-2"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[7, 'desc']] // Default order by CreatedDate descending
+            });
+
+            // Reload table on filter change
+            $('#term, #session, #schoolclass, #subclass').on('change', function () {
+                studentsTable.ajax.reload();
+            });
+
+            // Handle "Select All" checkbox
+            $('#selectAll').on('change', function () {
+                $('.row-checkbox').prop('checked', this.checked);
+                toggleDeleteSelectedBtn();
+            });
+
+            // Handle individual row checkboxes
+            $('#studentsTable').on('change', '.row-checkbox', function () {
+                if (!this.checked) {
+                    $('#selectAll').prop('checked', false);
+                }
+                toggleDeleteSelectedBtn();
+            });
+
+        $('#batchSubjects').multiselect({
+                columns: 2,
+                placeholder: 'Select Subjects',
+                search: true,
+                searchOptions: {
+                    'default': 'Search Subject'
+                },
+                selectAll: true
+            });
+
+            // Handle Bulk Delete
+            $('#btnDeleteSelected').on('click', function() {
+                let selectedIds = [];
+                let hasResultsCount = 0;
+
+                $('.row-checkbox:checked').each(function() {
+                    selectedIds.push(parseInt($(this).val()));
+                    if($(this).data('hasresults') === true || $(this).data('hasresults') === "true") {
+                        hasResultsCount++;
+                    }
+                });
+
+                if (selectedIds.length === 0) return;
+
+                if (hasResultsCount > 0) {
+                    Swal.fire({
+                        title: 'Cannot Delete Selected',
+                        text: `You have selected ${hasResultsCount} registration(s) that already have results recorded. They cannot be deleted. Please uncheck them first.`,
+                        icon: 'error'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Delete Selected Registrations?',
+                    text: `Are you sure you want to delete ${selectedIds.length} registration(s)? This action cannot be undone.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete them!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/V1/DeleteTermRegistrations',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ Ids: selectedIds }),
+                            headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                            success: function (res) {
+                                if (res.success) {
+                                    Swal.fire('Deleted!', res.message, 'success');
+                                    $('#selectAll').prop('checked', false);
+                                    toggleDeleteSelectedBtn();
+                                    studentsTable.ajax.reload();
+                                } else {
+                                    Swal.fire('Cannot Delete', res.message, 'error');
+                                }
+                            },
+                            error: function () {
+                                Swal.fire('Error', 'An error occurred. Please try again.', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        function toggleDeleteSelectedBtn() {
+            if ($('.row-checkbox:checked').length > 0) {
+                $('#btnDeleteSelected').show();
+            } else {
+                $('#btnDeleteSelected').hide();
+            }
+        }
+
+        function confirmDelete(id, hasRecordedResults) {
+            if (hasRecordedResults) {
+                Swal.fire({
+                    title: 'Cannot Delete',
+                    text: 'Results have already been recorded for this registration.',
+                    icon: 'error'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Delete Registration?',
+                text: 'Are you sure you want to delete this term registration?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeleteTermRegistration',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                studentsTable.ajax.reload();
+                            } else {
+                                Swal.fire('Cannot Delete', r.message, 'error');
+                            }
+                        },
+                        error: function () { 
+                            Swal.fire('Error', 'An error occurred. Please try again.', 'error'); 
+                        }
+                    });
+                }
+            });
+        }
+
+        // --- BATCH EXCEL REGISTRATION LOGIC ---
+        $('#btnSubmitBatchExcel').on('click', function () {
+            // Validate form
+            const session = $('#batchSession').val();
+            const term = $('#batchTerm').val();
+            const schoolclass = $('#batchClass').val();
+            const subclass = $('#batchSubClass').val();
+            const fileInput = $('#batchExcelFile')[0].files[0];
+
+            if (!session || !term || !schoolclass || !subclass || !fileInput) {
+                Swal.fire('Validation Error', 'Please select all required fields and upload an Excel file.', 'warning');
+                return;
+            }
+
+            // Get selected subjects
+            const subjects = $('#batchSubjects').val();
+            const subjectString = subjects ? subjects.join(',') : '';
+
+            // Create FormData
+            const formData = new FormData();
+            formData.append('Term', term);
+            formData.append('SessionId', session);
+            formData.append('SchoolClassId', schoolclass);
+            formData.append('SubClassId', subclass);
+            formData.append('Subjects', subjectString);
+            formData.append('ExcelFile', fileInput);
+
+            // Show loading state
+            const btn = $(this);
+            const originalText = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
+
+            // Hide previous results
+            $('#batchResultsContainer').hide();
+            $('#batchResultsErrors').hide();
+            $('#batchErrorsList').empty();
+
+            $.ajax({
+                url: '/V1/BatchExcelRegistration',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (res) {
+                    btn.html(originalText).prop('disabled', false);
+
+                    $('#batchResultsContainer').show();
+
+                    if (res.success) {
+                        $('#batchResultsSummary').html(`
+                            <div class="alert alert-success mb-0">
+                                <i class="bi bi-check-circle-fill me-2"></i> ${res.message}
+                            </div>
+                        `);
+                        studentsTable.ajax.reload();
+                    } else {
+                        let alertClass = res.successCount > 0 ? 'alert-warning' : 'alert-danger';
+                        $('#batchResultsSummary').html(`
+                            <div class="alert ${alertClass} mb-0">
+                                <i class="bi bi-exclamation-circle-fill me-2"></i> ${res.message}
+                            </div>
+                        `);
+
+                        if (res.errors && res.errors.length > 0) {
+                            $('#batchResultsErrors').show();
+                            let errorsHtml = '<ul class="mb-0 text-danger">';
+                            res.errors.forEach(e => {
+                                errorsHtml += `<li>${e}</li>`;
+                            });
+                            errorsHtml += '</ul>';
+                            $('#batchErrorsList').html(errorsHtml);
+                        }
+                    }
+                },
+                error: function () {
+                    btn.html(originalText).prop('disabled', false);
+                    Swal.fire('Error', 'An unexpected error occurred during upload. Please try again.', 'error');
+                }
+            });
+        });
+
+    </script>
+}

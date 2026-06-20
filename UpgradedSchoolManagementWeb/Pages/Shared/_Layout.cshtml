@@ -1,0 +1,516 @@
+﻿@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using UpgradedSchoolManagementDataAccess.Data
+@inject IOptions<SchoolConfigurationSetup> SchoolConfig
+@inject IAuthorizationService AuthorizationService
+@inject ApplicationDbContext DbContext
+@{
+    var _userName = User.Identity?.Name ?? "User";
+    var _initials = _userName.Length >= 2 ? _userName.Substring(0, 2).ToUpper() : _userName.ToUpper();
+    var _schoolName = SchoolConfig.Value.Name ?? "School Management System";
+    var _schoolPhoto = SchoolConfig.Value.LogoUrl;
+    var _displayRole = User.IsInRole("SuperAdmin") ? "Super Admin"
+        : User.IsInRole("SchoolAdmin") ? "School Admin"
+        : User.IsInRole("Principal") ? "Principal"
+        : User.IsInRole("Teacher") ? "Teacher"
+        : User.IsInRole("Accountant") ? "Accountant"
+        : User.IsInRole("Parent") ? "Parent"
+        : User.IsInRole("Student") ? "Student"
+        : "User";
+
+    // Student avatar data (populated only for Student role)
+    string? _studentPicture = null;
+    string _studentGender = "";
+    if (User.IsInRole("Student"))
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var student = await DbContext.StudentsTables
+                .FirstOrDefaultAsync(s => s.ApplicationUserId == userId);
+            if (student != null)
+            {
+                _studentPicture = student.PicturePath;
+                _studentGender = student.Gender.ToString();
+            }
+        }
+    }
+
+    Func<string, string> NavActive = path =>
+        Context.Request.Path.StartsWithSegments(path) ? " active" : "";
+    Func<string, string> ChildActive = path =>
+        Context.Request.Path.Equals(path) ? " active" : "";
+
+    // Permission-based checks (cached from IAuthorizationService)
+    async Task<bool> HasPermission(string policy)
+    {
+        return (await AuthorizationService.AuthorizeAsync(User, policy)).Succeeded;
+    }
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - School Management System</title>
+    @await RenderSectionAsync("Sheets", required: false)
+
+    <link href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+
+    <!-- ════════════ SIDEBAR ════════════ -->
+    <aside id="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-icon"><img src="@_schoolPhoto" alt="School Logo" class="rounded-circle3" width="40px" /></div>
+            <div>
+                <div class="logo-text">@(_schoolName.Length > 15 ? _schoolName.Substring(0, 15) : _schoolName)</div>
+                <div class="logo-sub">Management System</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebarNav">
+
+            <!-- ── OVERVIEW ── -->
+            <div class="nav-section-label">Overview</div>
+            <div class="nav-item">
+                <a class="@("nav-item-link" + NavActive("/"))" asp-page="/Index">
+                    <i class="bi bi-grid-1x2-fill nav-icon"></i>
+                    <span class="nav-link-text">Dashboard</span>
+                </a>
+            </div>
+
+            <!-- ── STUDENT PORTAL ── -->
+            @if (User.IsInRole("Student"))
+            {
+                <div class="nav-section-label">Student Portal</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/student/dashboard"))" asp-page="/student/dashboard">
+                        <i class="bi bi-speedometer2 nav-icon"></i>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/student/profile"))" asp-page="/student/profile">
+                        <i class="bi bi-person-circle nav-icon"></i>
+                        <span class="nav-link-text">My Profile</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/student/payment-history"))" asp-page="/student/payment-history">
+                        <i class="bi bi-credit-card nav-icon"></i>
+                        <span class="nav-link-text">Payment History</span>
+                    </a>
+                </div>
+            }
+
+            <!-- ── PEOPLE (Students) ── -->
+            @if (await HasPermission("Student.View"))
+            {
+                <div class="nav-section-label">People</div>
+                <div class="nav-item">
+                    <a class="nav-item-link has-children" href="#">
+                        <i class="bi bi-people-fill nav-icon"></i>
+                        <span class="nav-link-text">Students</span>
+                        <i class="bi bi-chevron-right nav-chevron"></i>
+                    </a>
+                    <div class="nav-submenu">
+                        @* <a class="@("nav-child-link" + ChildActive("/Admin/Students"))" asp-page="/Admin/Students/Index">
+                            <span>Registration</span>
+                        </a> *@
+                        @if (await HasPermission("Student.Create"))
+                        {
+                            <a class="@("nav-child-link" + ChildActive("/admin/student-data/students-admission/index"))" asp-page="/admin/student-data/students-admission/index">
+                                <span>New Enrollment</span>
+                            </a>
+                            <a class="@("nav-child-link" + ChildActive("/admin/student-data/students-reg/index"))" asp-page="/admin/student-data/students-reg/index">
+                                <span>Termly Registration</span>
+                            </a>
+                        }
+                        <a class="@("nav-child-link" + ChildActive("/Admin/student-data/parent-data"))" asp-page="/Admin/student-data/parent-data/Index">
+                            <span>Parents/Guardians</span>
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <!-- ── STAFF (Teachers) ── -->
+            @if (await HasPermission("Teacher.View"))
+            {
+                <div class="nav-section-label">Staff</div>
+                <div class="nav-item">
+                    <a class="nav-item-link has-children" href="#">
+                        <i class="bi bi-person-badge-fill nav-icon"></i>
+                        <span class="nav-link-text">Employees</span>
+                        <i class="bi bi-chevron-right nav-chevron"></i>
+                    </a>
+                    <div class="nav-submenu">
+                        <a class="@("nav-child-link" + ChildActive("/Admin/employee-data/employees/index"))" asp-page="/Admin/employee-data/employees/index">
+                            <span>All Employees</span>
+                        </a>
+                        @if (await HasPermission("Teacher.Create"))
+                        {
+                            <a class="@("nav-child-link" + ChildActive("/Admin/employee-data/employees/upsert"))" asp-page="/Admin/employee-data/employees/upsert">
+                                <span>Add Employee</span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- ── ACADEMIC ── -->
+            @if (await HasPermission("AcademicStructure.View"))
+            {
+                <div class="nav-section-label">Academic</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Academic/manage-session"))" asp-page="/Admin/Academic/manage-session/Index">
+                        <i class="bi bi-calendar-range-fill nav-icon"></i>
+                        <span class="nav-link-text">Sessions</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Academic/manage-school"))" asp-page="/Admin/Academic/manage-school/Index">
+                        <i class="bi bi-mortarboard-fill nav-icon"></i>
+                        <span class="nav-link-text">Classes</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Academic/manage-subclass"))" asp-page="/Admin/Academic/manage-subclass/Index">
+                        <i class="bi bi-intersect nav-icon"></i>
+                        <span class="nav-link-text">Sub-Classes</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Academic/manage-subjects"))" asp-page="/Admin/Academic/manage-subjects/Index">
+                        <i class="bi bi-journal-bookmark-fill nav-icon"></i>
+                        <span class="nav-link-text">Subjects</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/admin/Academic/result-config/index"))" asp-page="/admin/Academic/result-config/index">
+                        <i class="bi bi-journal-bookmark-fill nav-icon"></i>
+                        <span class="nav-link-text">Result Configuration</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Academic/TerminalSkills/Index"))" asp-page="/Admin/Academic/TerminalSkills/Index">
+                        <i class="bi bi-stars nav-icon"></i>
+                        <span class="nav-link-text">Terminal Skills</span>
+                    </a>
+                </div>
+            }
+
+            <!-- ── ATTENDANCE ── -->
+            @if (await HasPermission("Student.View"))
+            {
+                <div class="nav-section-label">Attendance</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + ChildActive("/student/payment-history"))" asp-page="/student/payment-history">
+                        <i class="bi bi-clipboard2-check-fill nav-icon"></i>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/student/profile"))" asp-page="/student/profile">
+                        <i class="bi bi-file-earmark-bar-graph-fill nav-icon"></i>
+                        <span class="nav-link-text">Profile</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/student.payment_history"))" asp-page="/student/payment_history">
+                        <i class="bi bi-file-earmark-bar-graph-fill nav-icon"></i>
+                        <span class="nav-link-text">Payment History</span>
+                    </a>
+                </div>
+            }
+
+            <!-- ── RESULTS ── -->
+            @if (await HasPermission("AcademicStructure.View"))
+            {
+                <div class="nav-section-label">Results</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/result-manager/index"))" asp-page="/result-manager/index">
+                        <i class="bi bi-pencil-square nav-icon"></i>
+                        <span class="nav-link-text">Results Entry</span>
+                    </a>
+                </div>
+                @* <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Results/Reports"))" asp-page="/Admin/Results/Reports">
+                        <i class="bi bi-file-earmark-text-fill nav-icon"></i>
+                        <span class="nav-link-text">Report Cards</span>
+                    </a>
+                </div> *@
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/result-manager/master-sheet"))" asp-page="/result-manager/master-sheet">
+                        <i class="bi bi-calendar3 nav-icon"></i>
+                        <span class="nav-link-text">Annual Master Sheet</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/result-manager/terminal-master-sheet"))" asp-page="/result-manager/terminal-master-sheet">
+                        <i class="bi bi-file-spreadsheet-fill nav-icon"></i>
+                        <span class="nav-link-text">Terminal Master Sheet</span>
+                    </a>
+                </div>
+            }
+
+            <!-- ── FINANCE ── -->
+            @if (await HasPermission("Finance.View"))
+            {
+                <div class="nav-section-label">Finance</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/Dashboard"))" asp-page="/Admin/Finance/Dashboard/Index">
+                        <i class="bi bi-speedometer2 nav-icon"></i>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/Categories"))" asp-page="/Admin/Finance/Categories/Index">
+                        <i class="bi bi-tags nav-icon"></i>
+                        <span class="nav-link-text">Categories</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/items"))" asp-page="/Admin/Finance/items/Index">
+                        <i class="bi bi-list nav-icon"></i>
+                        <span class="nav-link-text">Payment Items</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/Setup"))" asp-page="/Admin/Finance/Setup/Index">
+                        <i class="bi bi-gear nav-icon"></i>
+                        <span class="nav-link-text">Payment Setup</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/Payments"))" asp-page="/Admin/Finance/Payments/Index">
+                        <i class="bi bi-credit-card-2-front nav-icon"></i>
+                        <span class="nav-link-text">Student Payments</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/Admin/Finance/Reports"))" asp-page="/Admin/Finance/Reports/ClassReport">
+                        <i class="bi bi-bar-chart-fill nav-icon"></i>
+                        <span class="nav-link-text">Reports</span>
+                    </a>
+                </div>
+            }
+
+            <!-- ── SYSTEM ── -->
+            @if (await HasPermission("User.View") || await HasPermission("Role.View"))
+            {
+                <div class="nav-section-label">System</div>
+                @if (await HasPermission("User.View"))
+                {
+                    <div class="nav-item">
+                        <a class="@("nav-item-link" + NavActive("/Admin/Users"))" asp-page="/Admin/Users/Index">
+                            <i class="bi bi-people-fill nav-icon"></i>
+                            <span class="nav-link-text">Users</span>
+                        </a>
+                    </div>
+                }
+                @if (await HasPermission("Role.View"))
+                {
+                    <div class="nav-item">
+                        <a class="@("nav-item-link" + NavActive("/Admin/Roles"))" asp-page="/Admin/Roles/Index">
+                            <i class="bi bi-shield-fill nav-icon"></i>
+                            <span class="nav-link-text">Roles</span>
+                        </a>
+                    </div>
+                }
+                @if (await HasPermission("AuditLog.View"))
+                {
+                    <div class="nav-item">
+                        <a class="@("nav-item-link" + NavActive("/Admin/AuditLogs"))" asp-page="/Admin/AuditLogs/Index">
+                            <i class="bi bi-journal-text nav-icon"></i>
+                            <span class="nav-link-text">Audit Logs</span>
+                        </a>
+                    </div>
+                }
+            }
+
+            <!-- ── SETTINGS ── -->
+            @if (await HasPermission("Settings.View"))
+            {
+                <div class="nav-section-label">Settings</div>
+                <div class="nav-item">
+                    <a class="@("nav-item-link" + NavActive("/app-settings"))" asp-page="/app-settings">
+                        <i class="bi bi-gear-fill nav-icon"></i>
+                        <span class="nav-link-text">General Settings</span>
+                    </a>
+                </div>
+            }
+
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="avatar" id="sidebarAvatar" style="@(!string.IsNullOrEmpty(_studentPicture) ? "padding:0;overflow:hidden" : (_studentGender == "Male" ? "background:#d0e8ff;color:#0d6efd" : _studentGender == "Female" ? "background:#f8d7da;color:#dc3545" : ""))">
+                @if (!string.IsNullOrEmpty(_studentPicture))
+                {
+                    <img src="@_studentPicture" alt="" style="width:100%;height:100%;object-fit:cover;" />
+                }
+                else if (_studentGender == "Male")
+                {
+                    <i class="bi bi-person-fill"></i>
+                }
+                else if (_studentGender == "Female")
+                {
+                    <i class="bi bi-person-fill"></i>
+                }
+                else
+                {
+                    @_initials
+                }
+            </div>
+            <div class="user-info">
+                <div class="user-name">@_userName</div>
+                <div class="user-role">@_displayRole</div>
+            </div>
+        </div>
+    </aside>
+
+    <div id="overlay"></div>
+
+    <div id="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <button class="topbar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+
+            <div class="search-wrap d-none d-sm-block">
+                <i class="bi bi-search"></i>
+                <input type="text" class="search-input" placeholder="Search students, courses, teachers…" />
+            </div>
+
+            <div class="topbar-right">
+                <div class="icon-btn d-sm-none"><i class="bi bi-search"></i></div>
+
+                @if (!User.IsInRole("Student"))
+                {
+                    <div class="icon-btn">
+                        <i class="bi bi-bell-fill"></i>
+                        <span class="notif-dot"></span>
+                    </div>
+
+                    <div class="icon-btn d-none d-md-flex"><i class="bi bi-envelope-fill"></i></div>
+                }
+
+                <!-- ── THEME TOGGLE ── -->
+                <button class="theme-btn" id="themeToggle" title="Toggle light / dark theme">
+                    <div class="theme-btn-track-icons">
+                        <i class="bi bi-moon-stars-fill"></i>
+                        <i class="bi bi-sun-fill"></i>
+                    </div>
+                    <div class="theme-btn-knob" id="themeKnob">
+                        <i class="bi bi-moon-stars-fill" id="themeKnobIcon"></i>
+                    </div>
+                </button>
+
+                <!-- ── PROFILE DROPDOWN ── -->
+                    <div class="profile-wrap" id="profileWrap">
+                        <div class="profile-trigger" id="profileTrigger">
+                            <div class="avatar" style="@(!string.IsNullOrEmpty(_studentPicture) ? "padding:0;overflow:hidden" : (_studentGender == "Male" ? "background:#d0e8ff;color:#0d6efd" : _studentGender == "Female" ? "background:#f8d7da;color:#dc3545" : ""))">
+                                @if (!string.IsNullOrEmpty(_studentPicture))
+                                {
+                                    <img src="@_studentPicture" alt="" style="width:100%;height:100%;object-fit:cover;" />
+                                }
+                                else if (_studentGender == "Male")
+                                {
+                                    <i class="bi bi-person-fill"></i>
+                                }
+                                else if (_studentGender == "Female")
+                                {
+                                    <i class="bi bi-person-fill"></i>
+                                }
+                                else
+                                {
+                                    @_initials
+                                }
+                            </div>
+                            <span class="profile-trigger-name d-none d-lg-block">@_userName</span>
+                            <i class="bi bi-chevron-down profile-chevron"></i>
+                        </div>
+
+                        <div class="profile-dropdown" id="profileDropdown">
+                            <div class="dd-header">
+                                <div class="avatar" style="@(!string.IsNullOrEmpty(_studentPicture) ? "padding:0;overflow:hidden" : (_studentGender == "Male" ? "background:#d0e8ff;color:#0d6efd" : _studentGender == "Female" ? "background:#f8d7da;color:#dc3545" : ""))">
+                                    @if (!string.IsNullOrEmpty(_studentPicture))
+                                    {
+                                        <img src="@_studentPicture" alt="" style="width:100%;height:100%;object-fit:cover;" />
+                                    }
+                                    else if (_studentGender == "Male")
+                                    {
+                                        <i class="bi bi-person-fill"></i>
+                                    }
+                                    else if (_studentGender == "Female")
+                                    {
+                                        <i class="bi bi-person-fill"></i>
+                                    }
+                                    else
+                                    {
+                                        @_initials
+                                    }
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">@_userName</div>
+                                    <div class="small text-muted">@_displayRole</div>
+                                </div>
+                            </div>
+                            <div class="dd-section">
+                                @if (User.IsInRole("Student"))
+                                {
+                                    <a class="dd-item" asp-page="/student/profile"><i class="bi bi-person-circle"></i>My Profile</a>
+                                    <a class="dd-item" asp-page="/student/payment-history"><i class="bi bi-credit-card-2-front"></i>Payment History</a>
+                                }
+                                @if (await HasPermission("Settings.View"))
+                                {
+                                <a class="dd-item" asp-page="/app-settings"><i class="bi bi-gear"></i>Settings</a>
+                                }
+                                @if (await HasPermission("AuditLog.View"))
+                                {
+                                    <a class="dd-item" asp-page="/Admin/AuditLogs/Index"><i class="bi bi-journal-text"></i>Audit Logs</a>
+                                }
+                            </div>
+                            <div class="dd-section">
+                                <form asp-action="logout" asp-controller="v1">
+                                    <button class="dd-item btn btn-link w-100 text-danger" type="submit"><i class="bi bi-box-arrow-right"></i>Sign Out</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+            </div><!-- /topbar-right -->
+        </header>
+            @RenderBody()
+
+        <footer class="d-flex justify-content-between align-items-center px-3 py-2 mt-auto" style="border-top:1px solid var(--border-color, #dee2e6);font-size:.825rem;">
+            <span>&copy; @DateTime.Now.Year @_schoolName. All rights reserved.</span>
+            <span>Design by: <strong>D-Return Tech - 08039410863</strong></span>
+        </footer>
+    </div>
+
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script> 
+    @* <script src="https://cdn.jsdelivr.net/npm/moment@2.30.4/moment.min.js"></script> *@
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        $.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            if (token) {
+                jqXHR.setRequestHeader('RequestVerificationToken', token);
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

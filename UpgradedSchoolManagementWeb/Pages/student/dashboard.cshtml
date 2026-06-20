@@ -1,0 +1,420 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.student.dashboardModel
+@{
+    ViewData["Title"] = "Student Dashboard";
+}
+@section Sheets {
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-mortarboard-fill me-2" style="color:var(--accent)"></i>Student Dashboard</div>
+            <div class="mgmt-sub" id="welcomeMsg">Welcome back!</div>
+        </div>
+    </div>
+
+    <div class="row g-1">
+        <div class="col-md-8">
+
+            <!-- Info Cards -->
+            <div class="row g-3 mb-4" id="infoCards">
+                <div class="col-md-3 col-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-body text-center py-4">
+                            <div class="fs-1 text-primary mb-2"><i class="bi bi-book"></i></div>
+                            <div class="small text-muted">Current Class</div>
+                            <div class="fw-bold fs-5" id="currentClass">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-body text-center py-4">
+                            <div class="fs-1 text-success mb-2"><i class="bi bi-calendar-range"></i></div>
+                            <div class="small text-muted">Session</div>
+                            <div class="fw-bold fs-5" id="currentSession">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-body text-center py-4">
+                            <div class="fs-1 text-warning mb-2"><i class="bi bi-layers"></i></div>
+                            <div class="small text-muted">Term</div>
+                            <div class="fw-bold fs-5" id="currentTerm">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-body text-center py-4">
+                            <div class="fs-1 text-info mb-2"><i class="bi bi-journal-bookmark"></i></div>
+                            <div class="small text-muted">Registrations</div>
+                            <div class="fw-bold fs-5" id="totalRegs">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic Performance Charts -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-head">
+                            <h6><i class="bi bi-bar-chart-fill me-2" style="color:var(--accent)"></i>Cumulative Academic Performance</h6>
+                        </div>
+                        <div class="mgmt-card-body">
+                            <canvas id="cumulativeChart" height="220"></canvas>
+                            <div id="cumulativeEmpty" class="text-muted text-center py-5" style="display:none">
+                                <i class="bi bi-graph-down-arrow fs-1 d-block mb-2"></i>
+                                No recorded results yet.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-head">
+                            <h6><i class="bi bi-bar-chart-steps me-2" style="color:var(--accent2)"></i>Term-by-Term Performance</h6>
+                        </div>
+                        <div class="mgmt-card-body">
+                            <canvas id="termBreakdownChart" height="220"></canvas>
+                            <div id="breakdownEmpty" class="text-muted text-center py-5" style="display:none">
+                                <i class="bi bi-graph-down-arrow fs-1 d-block mb-2"></i>
+                                No recorded results yet.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Term Registration Table -->
+            <div class="mgmt-card fade-in mb-4">
+                <div class="mgmt-card-head">
+                    <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>My Term Registrations</h6>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="table-responsive">
+                        <table id="termRegTable" class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Session</th>
+                                    <th>Term</th>
+                                    <th>Class</th>
+                                    <th>Sub-Class</th>
+                                    <th>Subjects</th>
+                                    <th>Registered</th>
+                                </tr>
+                            </thead>
+                            <tbody id="termRegBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <!-- Result Viewer Cards -->
+            <div class="row g-3">
+                <!-- Term Result Viewer -->
+                <div class="col-12">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-head">
+                            <h6><i class="bi bi-file-earmark-text me-2" style="color:var(--accent)"></i>Term Result Viewer</h6>
+                        </div>
+                        <div class="mgmt-card-body">
+                            <div class="mb-1">
+                                <label class="form-label small">Academic Session</label>
+                                <select id="termSessionSelect" class="form-select">
+                                    <option value="">— Select Session —</option>
+                                </select>
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label small">Term</label>
+                                <select id="termSelect" class="form-select">
+                                    <option value="">— Select Term —</option>
+                                </select>
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label small">Class</label>
+                                <select id="classSelect" class="form-select">
+                                    <option value="">— Select Class —</option>
+                                </select>
+                            </div>
+                            <button id="viewTermResultBtn" class="btn btn-primary w-100" disabled>
+                                <i class="bi bi-eye me-1"></i> View Term Result
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Annual Result Viewer -->
+                <div class="col-12">
+                    <div class="mgmt-card fade-in h-100">
+                        <div class="mgmt-card-head">
+                            <h6><i class="bi bi-calendar3 me-2" style="color:var(--accent2)"></i>Annual Result Viewer</h6>
+                        </div>
+                        <div class="mgmt-card-body">
+                            <div class="mb-3">
+                                <label class="form-label small">Academic Session</label>
+                                <select id="annualSessionSelect" class="form-select">
+                                    <option value="">— Select Session —</option>
+                                </select>
+                            </div>
+                            <div class="mb-4 d-flex align-items-center text-muted small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Annual result combines all three terms for the selected session.
+                            </div>
+                            <button id="viewAnnualResultBtn" class="btn btn-success w-100" disabled>
+                                <i class="bi bi-eye me-1"></i> View Annual Result
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        var allRegs = [];
+
+        function getUnique(arr, key) {
+            return arr.map(function (r) { return r[key]; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+        }
+
+        function populateTermClass() {
+            var sessionName = $('#termSessionSelect').val();
+            var sessionRegs = allRegs.filter(function (r) { return r.session === sessionName; });
+            var terms = getUnique(sessionRegs, 'term');
+            var cur = $('#termSelect').val();
+            $('#termSelect').html('<option value="">— Select Term —</option>');
+            terms.forEach(function (t) {
+                $('#termSelect').append('<option value="' + t + '">' + t + '</option>');
+            });
+            $('#termSelect').val(cur);
+
+            populateClassSelect();
+        }
+
+        function populateClassSelect() {
+            var sessionName = $('#termSessionSelect').val();
+            var termName = $('#termSelect').val();
+            var filtered = allRegs.filter(function (r) {
+                return r.session === sessionName && r.term === termName;
+            });
+            var classes = getUnique(filtered, 'schoolClass');
+            var cur = $('#classSelect').val();
+            $('#classSelect').html('<option value="">— Select Class —</option>');
+            classes.forEach(function (c) {
+                $('#classSelect').append('<option value="' + c + '">' + c + '</option>');
+            });
+            $('#classSelect').val(cur);
+            checkTermEnabled();
+        }
+
+        function checkTermEnabled() {
+            var ok = $('#termSessionSelect').val() && $('#termSelect').val() && $('#classSelect').val();
+            $('#viewTermResultBtn').prop('disabled', !ok);
+        }
+
+        function checkAnnualEnabled() {
+            $('#viewAnnualResultBtn').prop('disabled', !$('#annualSessionSelect').val());
+        }
+
+        $(document).ready(function () {
+            $.get('/Home/GetMyDashboard', function (res) {
+                if (!res.success) {
+                    $('#welcomeMsg').text('Could not load dashboard data.');
+                    return;
+                }
+                var d = res.data;
+                $('#welcomeMsg').text('Welcome, ' + d.studentName + '!');
+
+                var reg = d.currentRegistration;
+                if (reg) {
+                    $('#currentClass').text(reg.schoolClass || '—');
+                    $('#currentSession').text(reg.session || '—');
+                    $('#currentTerm').text(reg.term || '—');
+                }
+                $('#totalRegs').text(d.totalRegistrations || 0);
+
+                var tbody = $('#termRegBody');
+                tbody.empty();
+                if (d.allRegistrations && d.allRegistrations.length) {
+                    d.allRegistrations.forEach(function (r) {
+                        tbody.append('<tr>' +
+                            '<td>' + (r.session || '—') + '</td>' +
+                            '<td>' + (r.term || '—') + '</td>' +
+                            '<td>' + (r.schoolClass || '—') + '</td>' +
+                            '<td>' + (r.subClass || '—') + '</td>' +
+                            '<td>' + (r.noOfSubjects || 0) + '</td>' +
+                            '<td>' + new Date(r.createdDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + '</td>' +
+                            '</tr>');
+                    });
+                } else {
+                    tbody.append('<tr><td colspan="6" class="text-muted text-center">No term registrations found.</td></tr>');
+                }
+
+                // Load performance charts
+                $.get('/Home/GetMyPerformanceData', function (perf) {
+                    if (!perf.success || !perf.data) return;
+
+                    var cumulative = perf.data.cumulative || [];
+                    var termBreakdown = perf.data.termBreakdown || [];
+
+                    // Chart 1: Cumulative
+                    if (cumulative.length) {
+                        var ctx1 = document.getElementById('cumulativeChart').getContext('2d');
+                        new Chart(ctx1, {
+                            type: 'bar',
+                            data: {
+                                labels: cumulative.map(function (c) { return c.session; }),
+                                datasets: [{
+                                    label: 'Total Score',
+                                    data: cumulative.map(function (c) { return c.totalScore; }),
+                                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                                    borderColor: '#0d6efd',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Total Score' }
+                                    },
+                                    x: {
+                                        title: { display: true, text: 'Academic Session' }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        $('#cumulativeChart').hide();
+                        $('#cumulativeEmpty').show();
+                    }
+
+                    // Chart 2: Term Breakdown
+                    if (termBreakdown.length) {
+                        var ctx2 = document.getElementById('termBreakdownChart').getContext('2d');
+                        new Chart(ctx2, {
+                            type: 'bar',
+                            data: {
+                                labels: termBreakdown.map(function (t) { return t.session; }),
+                                datasets: [
+                                    {
+                                        label: 'First Term',
+                                        data: termBreakdown.map(function (t) { return t.firstTerm; }),
+                                        backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                                        borderColor: '#0d6efd',
+                                        borderWidth: 1,
+                                        borderRadius: 3
+                                    },
+                                    {
+                                        label: 'Second Term',
+                                        data: termBreakdown.map(function (t) { return t.secondTerm; }),
+                                        backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                                        borderColor: '#198754',
+                                        borderWidth: 1,
+                                        borderRadius: 3
+                                    },
+                                    {
+                                        label: 'Third Term',
+                                        data: termBreakdown.map(function (t) { return t.thirdTerm; }),
+                                        backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                                        borderColor: '#ffc107',
+                                        borderWidth: 1,
+                                        borderRadius: 3
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Total Score' }
+                                    },
+                                    x: {
+                                        title: { display: true, text: 'Academic Session' }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        $('#termBreakdownChart').hide();
+                        $('#breakdownEmpty').show();
+                    }
+                });
+
+                // Store registrations for dropdowns
+                allRegs = d.allRegistrations || [];
+
+                // Populate session dropdowns
+                var sessions = getUnique(allRegs, 'session');
+                $.each(sessions, function (i, s) {
+                    $('#termSessionSelect').append('<option value="' + s + '">' + s + '</option>');
+                    $('#annualSessionSelect').append('<option value="' + s + '">' + s + '</option>');
+                });
+            });
+
+            // Term viewer dropdown change handlers
+            $('#termSessionSelect').on('change', function () {
+                $('#termSelect').html('<option value="">— Select Term —</option>');
+                $('#classSelect').html('<option value="">— Select Class —</option>');
+                checkTermEnabled();
+                if ($(this).val()) populateTermClass();
+            });
+            $('#termSelect').on('change', function () {
+                $('#classSelect').html('<option value="">— Select Class —</option>');
+                checkTermEnabled();
+                if ($(this).val()) populateClassSelect();
+            });
+            $('#classSelect').on('change', checkTermEnabled);
+            $('#annualSessionSelect').on('change', checkAnnualEnabled);
+
+            // Submit term result
+            $('#viewTermResultBtn').on('click', function () {
+                var sessionName = $('#termSessionSelect').val();
+                var termName = $('#termSelect').val();
+                var className = $('#classSelect').val();
+                var match = allRegs.find(function (r) {
+                    return r.session === sessionName && r.term === termName && r.schoolClass === className;
+                });
+                if (match) {
+                    window.location.href = '/result-manager/terminal-result/detail/' + match.id;
+                } else {
+                    alert('No matching registration found for the selected criteria.');
+                }
+            });
+
+            // Submit annual result
+            $('#viewAnnualResultBtn').on('click', function () {
+                var sessionName = $('#annualSessionSelect').val();
+                var match = allRegs.find(function (r) { return r.session === sessionName; });
+                if (!match) {
+                    alert('No registration found for the selected session.');
+                    return;
+                }
+                var prefixMap = { 1: 'nursery', 2: 'primary', 3: 'junior', 4: 'senior' };
+                var prefix = prefixMap[match.resultType] || 'primary';
+                window.location.href = '/result-manager/annual-result/' + prefix + '-annual-report?studentId=' + match.studentId + '&sessionId=' + match.sessionId + '&classId=' + match.schoolClassId + '&subClassId=' + match.subClassId;
+            });
+        });
+    </script>
+}

@@ -1,0 +1,304 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.admin.student_data.students_admission.indexModel
+@{
+    ViewData["Title"] = "Students";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-people-fill me-2" style="color:var(--accent)"></i>Students</div>
+            <div class="mgmt-sub">Manage student admissions and records</div>
+        </div>
+        <a asp-page="/Admin/student-data/students-admission/upsert" class="btn-mgmt-primary">
+            <i class="bi bi-plus-lg"></i> Add Student
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Students</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="studentsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Photo</th>
+                            <th>Full Name</th>
+                            <th>Gender</th>
+                            <th>Date of Birth</th>
+                            <th>State</th>
+                            <th>Admission Number</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header new-bg-background text-white">
+                <h5 class="modal-title" id="resetPasswordModalLabel">
+                    <i class="bi bi-key me-2"></i>Reset Student Password
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetStudentId" value="" />
+                <div class="mb-3">
+                    <label class="form-label">Student</label>
+                    <p class="form-control-plaintext fw-bold" id="resetStudentName"></p>
+                </div>
+                <div class="mb-3">
+                    <label for="newPassword" class="form-label">New Password <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newPassword" placeholder="Enter new password" minlength="6" />
+                        <button class="btn btn-outline-secondary" type="button" onclick="generatePassword()">
+                            <i class="bi bi-dice-5"></i> Generate
+                        </button>
+                    </div>
+                    <div class="form-text">Minimum 6 characters. Use Generate to create a strong password.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="btnResetPassword">
+                    <i class="bi bi-check2-circle me-1"></i>Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let studentsTable;
+
+        function genderSvg(gender) {
+            var isMale = gender && gender.toLowerCase() === 'male';
+            var color = isMale ? '#4A90D9' : '#E87DA4';
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+                '<circle cx="50" cy="50" r="50" fill="' + color + '"/>' +
+                '<circle cx="50" cy="35" r="14" fill="white"/>' +
+                '<path d="M20 72 C20 58 34 50 50 50 C66 50 80 58 80 72" fill="white"/>' +
+                '</svg>';
+            return 'data:image/svg+xml,' + encodeURIComponent(svg);
+        }
+
+        function genderSvgImg(gender) {
+            var src = genderSvg(gender);
+            return '<img src="' + src + '" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">';
+        }
+
+        $(document).ready(function () {
+            studentsTable = $('#studentsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetStudents',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    {
+                        data: null, orderable: false, width: '60px',
+                        render: function (data, type, row) {
+                            if (row.picturePath) {
+                                return '<img src="' + row.picturePath + '" alt="photo" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.src=' + "'" + genderSvg(row.gender) + "'" + '">';
+                            }
+                            return genderSvgImg(row.gender);
+                        }
+                    },
+                    { data: 'fullName' },
+                    { data: 'gender', width: '80px' },
+                    { data: 'dateOfBirth', width: '120px' },
+                    { data: 'state', width: '110px' },
+                    { data: 'email' },
+                    {
+                        data: 'isActive', width: '90px',
+                        render: function (data, type, row) {
+                            return data
+                                ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Active</span>'
+                                : '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Inactive</span>';
+                        }
+                    },
+                    {
+                        data: 'id', orderable: false, width: '80px',
+                        render: function (data, type, row) {
+                            return '<div class="dropdown text-center">' +
+                                '<button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>' +
+                                '<ul class="dropdown-menu dropdown-menu-end">' +
+                                '<li><a class="dropdown-item" href="/Admin/student-data/students-admission/upsert?id=' + data + '"><i class="bi bi-pencil-square"></i>Edit</a></li>' +
+                                '<li><hr class="dropdown-divider"></li>' +
+                                '<li><a class="dropdown-item" href="javascript:void(0)" onclick="openResetPasswordModal(' + data + ',\'' + row.fullName.replace(/'/g, "\\'") + '\')"><i class="bi bi-key"></i>Reset Password</a></li>' +
+                                '<li><a class="dropdown-item" href="javascript:void(0)" onclick="toggleStudentStatus(' + data + ')"><i class="bi bi-toggle-on"></i>Toggle Active</a></li>' +
+                                '<li><hr class="dropdown-divider"></li>' +
+                                '<li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(' + data + ')"><i class="bi bi-trash3"></i>Delete</a></li>' +
+                                '</ul></div>';
+                        }
+                    }
+                ],
+                order: [[2, 'asc']]
+            });
+        });
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Student?',
+                text: 'This will permanently delete the student account. The action checks for active term registrations first.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    unBlockUlloader();
+                    $.ajax({
+                        url: '/V1/DeleteStudent',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.success) {
+                                Swal.fire('Deleted!', r.message, 'success');
+                                studentsTable.ajax.reload();
+                            } else {
+                                Swal.fire('Cannot Delete', r.message, 'error');
+                            }
+                        },
+                        complete: function () { $.unblockUI(); },
+                        error: function () { Swal.fire('Error', 'An error occurred. Please try again.', 'error'); }
+                    });
+                }
+            });
+        }
+
+        function openResetPasswordModal(studentId, studentName) {
+            $('#resetStudentId').val(studentId);
+            $('#resetStudentName').text(studentName);
+            $('#newPassword').val('');
+            $('#resetPasswordModal').modal('show');
+        }
+
+        function generatePassword() {
+            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var pwd = "";
+            for (var i = 0; i < 10; i++) {
+                pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            $("#newPassword").val(pwd);
+        }
+
+        $("#btnResetPassword").on("click", function () {
+            var studentId = $("#resetStudentId").val();
+            var newPassword = $("#newPassword").val().trim();
+
+            if (!studentId) {
+                Swal.fire("Error", "Student ID is missing.", "error");
+                return;
+            }
+            if (!newPassword || newPassword.length < 6) {
+                Swal.fire("Validation", "Password must be at least 6 characters.", "warning");
+                return;
+            }
+
+            var btn = $(this);
+            btn.html('<span class="spinner-border spinner-border-sm"></span> Resetting...').prop("disabled", true);
+            unBlockUlloader();
+
+            $.ajax({
+                url: "/V1/ResetStudentPassword",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ StudentId: parseInt(studentId), NewPassword: newPassword }),
+                headers: { "RequestVerificationToken": $("input[name='__RequestVerificationToken']").val() },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("Success", res.message, "success");
+                        $("#resetPasswordModal").modal("hide");
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                },
+                error: function () {
+                    Swal.fire("Error", "An error occurred. Please try again.", "error");
+                },
+                complete: function () {
+                    $.unblockUI();
+                    btn.html('<i class="bi bi-check2-circle me-1"></i>Reset Password').prop("disabled", false);
+                }
+            });
+        });
+
+        function toggleStudentStatus(studentId) {
+            unBlockUlloader();
+            $.ajax({
+                url: "/V1/ToggleStudentStatus",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ Id: studentId }),
+                headers: { "RequestVerificationToken": $("input[name='__RequestVerificationToken']").val() },
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire("Updated", res.message, "success");
+                        studentsTable.ajax.reload();
+                    } else {
+                        Swal.fire("Error", res.message, "error");
+                    }
+                },
+                complete: function () { $.unblockUI(); },
+                error: function () {
+                    Swal.fire("Error", "An error occurred. Please try again.", "error");
+                }
+            });
+        }
+
+        function unBlockUlloader(){
+            $.blockUI({
+                message: '<div class="bs-spinner mt-4 mt-lg-0"><div class= "spinner-border text-success mr-2 mt-2" style="width: 10rem; height: 10rem;" role="status"><span class="sr-only">Loading...</span></div> ',
+                fadeIn: 800,
+                //timeout: 2000, unblock after 2 seconds
+                overlayCSS: {
+                    backgroundColor: '#1b2024',
+                    opacity: 0.8,
+                    zIndex: 1200,
+                    cursor: 'wait'
+                },
+                css: {
+                    border: 0,
+                    color: '#fff',
+                    zIndex: 1201,
+                    padding: 0,
+                    backgroundColor: 'transparent'
+                },
+                onBlock: function () {
+
+                }
+            });
+        }
+    </script>
+}

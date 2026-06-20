@@ -1,0 +1,184 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Academic.manage_session.IndexModel
+@{
+    ViewData["Title"] = "Manage Sessions";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-calendar-range-fill me-2" style="color:var(--accent)"></i>Sessions</div>
+            <div class="mgmt-sub">Manage academic sessions for your school</div>
+        </div>
+        <button type="button" class="btn-mgmt-primary" onclick="showCreateModal()">
+            <i class="bi bi-plus-lg"></i> Add Session
+        </button>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Sessions</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="sessionsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Session Name</th>
+                            <th>Status</th>
+                            <th>Created Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Session Modal -->
+<div class="modal fade" id="sessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="sessionForm">
+                <div class="modal-body">
+                    <input type="hidden" id="sessionId" value="0" />
+                    <div class="mb-3">
+                        <label for="sessionName" class="form-label">Session Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="sessionName" placeholder="e.g., 2025/2026" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let sessionsTable;
+
+        $(document).ready(function () {
+            initDataTable();
+            $('#sessionForm').on('submit', function (e) { e.preventDefault(); submitForm(); });
+        });
+
+        function initDataTable() {
+            sessionsTable = $('#sessionsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetSessions',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'name' },
+                    {
+                        data: 'isActive',
+                        render: function (d) {
+                            return d ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>';
+                        },
+                        width: '100px'
+                    },
+                    { data: 'createdDate', render: function (d) { if (!d) return ''; var dt = new Date(d); return dt.getDate().toString().padStart(2,'0') + '-' + dt.toLocaleString('en-GB',{month:'short'}) + '-' + dt.getFullYear(); }, width: '130px' },
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            const statusText = row.isActive ? 'Deactivate' : 'Activate';
+                            const statusIcon = row.isActive ? 'bi-slash-circle' : 'bi-check-circle';
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="showEditModal(${data},'${row.name}')"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="toggleStatus(${data})"><i class="bi ${statusIcon}"></i>${statusText}</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        },
+                        orderable: false,
+                        width: '80px'
+                    }
+                ],
+                order: [[3, 'desc']]
+            });
+        }
+
+        function showCreateModal() {
+            $('#modalTitle').text('Add Session');
+            $('#sessionId').val('0');
+            $('#sessionName').val('');
+            $('#sessionModal').modal('show');
+        }
+
+        function showEditModal(id, name) {
+            $('#modalTitle').text('Edit Session');
+            $('#sessionId').val(id);
+            $('#sessionName').val(name);
+            $('#sessionModal').modal('show');
+        }
+
+        function submitForm() {
+            const id = $('#sessionId').val();
+            const name = $('#sessionName').val().trim();
+            if (!name) return;
+            const url = id === '0' ? '/V1/CreateSession' : '/V1/UpdateSession';
+            const data = id === '0' ? { Name: name } : { Id: parseInt(id), Name: name };
+            $.ajax({
+                url: url, type: 'POST', data: JSON.stringify(data), contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) { Swal.fire('Success', r.message, 'success'); $('#sessionModal').modal('hide'); sessionsTable.ajax.reload(); }
+                    else { Swal.fire('Error', r.message, 'error'); }
+                },
+                error: function () { Swal.fire('Error', 'An error occurred. Please try again.', 'error'); }
+            });
+        }
+
+        function toggleStatus(id) {
+            Swal.fire({ title: 'Change Status?', text: 'Are you sure you want to change this session status?', icon: 'question', showCancelButton: true, confirmButtonColor: 'var(--accent)', cancelButtonColor: 'var(--muted)', confirmButtonText: 'Yes, change it!' }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/ToggleSessionStatus', type: 'POST', data: JSON.stringify({ Id: id }), contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) { if (r.success) { Swal.fire('Done', r.message, 'success'); sessionsTable.ajax.reload(); } else { Swal.fire('Error', r.message, 'error'); } },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({ title: 'Delete Session?', text: 'This action cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonColor: 'var(--accent4)', cancelButtonColor: 'var(--muted)', confirmButtonText: 'Yes, delete it!' }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeleteSession', type: 'POST', data: JSON.stringify({ Id: id }), contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) { if (r.success) { Swal.fire('Deleted!', r.message, 'success'); sessionsTable.ajax.reload(); } else { Swal.fire('Error', r.message, 'error'); } },
+                        error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}

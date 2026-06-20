@@ -1,0 +1,501 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.result_manager.annual_result.nursery_annual_reportModel
+@{
+    Layout = null;
+    var initial = string.IsNullOrWhiteSpace(Model.Report.StudentName) ? "N" : Model.Report.StudentName.Substring(0, 1);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nursery Annual Report — @Model.Report.SessionName</title>
+    <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+            @@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;600;700&display=swap');
+
+            :root {
+                --sun: #FFB703;
+                --sky: #219EBC;
+                --leaf: #52B788;
+                --berry: #C77DFF;
+                --ink: #1a1a2e;
+                --soft: #f8f9ff;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Nunito', sans-serif;
+                background: var(--soft);
+                color: var(--ink);
+                font-size: 0.89rem;
+                margin: 0;
+            }
+
+            /* ── Header ── */
+            .annual-header {
+                background: var(--ink);
+                color: #fff;
+                position: relative;
+                overflow: hidden;
+            }
+
+                .annual-header::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: repeating-linear-gradient(45deg, transparent, transparent 18px, rgba(255,183,3,0.06) 18px, rgba(255,183,3,0.06) 36px);
+                }
+
+            .school-crest {
+                width: 76px;
+                height: 76px;
+                border-radius: 50%;
+                background: var(--sun);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 2.2rem;
+                border: 3px solid #fff;
+                flex-shrink: 0;
+            }
+
+            .school-name {
+                font-family: 'Baloo 2', sans-serif;
+                font-size: 1.5rem;
+                font-weight: 800;
+                line-height: 1.2;
+            }
+
+            .report-label {
+                display: inline-block;
+                background: var(--sun);
+                color: var(--ink);
+                font-family: 'Baloo 2', sans-serif;
+                font-weight: 800;
+                font-size: 0.78rem;
+                letter-spacing: 0.12em;
+                padding: 4px 16px;
+                border-radius: 2px;
+                margin-top: 6px;
+                text-transform: uppercase;
+            }
+
+            /* ── Cards ── */
+            .card-w {
+                background: #fff;
+                border: 1px solid #e6eaf2;
+                border-radius: 12px;
+            }
+
+            /* ── Section Label ── */
+            .slabel {
+                font-size: 0.67rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: var(--sky);
+            }
+
+            /* ── Term columns ── */
+            .term-head {
+                background: var(--sky);
+                color: #fff;
+                font-weight: 700;
+                font-size: 0.8rem;
+                text-align: center;
+                padding: 6px 4px;
+                border-radius: 4px 4px 0 0;
+            }
+
+            .term1 {
+                background: #e0f7fa;
+            }
+
+            .term2 {
+                background: #e8f5e9;
+            }
+
+            .term3 {
+                background: #fce4ec;
+            }
+
+            .annual-col {
+                background: var(--ink);
+                color: #fff;
+            }
+
+            /* ── Subject table ── */
+            .tbl-nur {
+                font-size: 0.83rem;
+            }
+
+                .tbl-nur thead th {
+                    background: var(--ink);
+                    color: #fff;
+                    font-size: 0.77rem;
+                    font-weight: 700;
+                    white-space: nowrap;
+                    border: none;
+                    padding: 8px 10px;
+                }
+
+                .tbl-nur td {
+                    vertical-align: middle;
+                    border-color: #f0f3fa;
+                    padding: 7px 10px;
+                }
+
+                .tbl-nur tbody tr:nth-child(even) {
+                    background: #fafbff;
+                }
+
+                .tbl-nur tfoot td {
+                    background: #fff8e1;
+                    font-weight: 700;
+                    border-top: 2px solid var(--sun);
+                }
+
+            /* ── Grade bubbles ── */
+            .gb {
+                display: inline-block;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                font-weight: 800;
+                font-size: 0.78rem;
+                line-height: 28px;
+                text-align: center;
+            }
+
+            .gA {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+            .gB {
+                background: #dbeafe;
+                color: #1e40af;
+            }
+
+            .gC {
+                background: #fef3c7;
+                color: #92400e;
+            }
+
+            .gD {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .rotate-upward {
+                transform: rotate(180deg);
+                writing-mode: vertical-lr;
+            }
+
+            /* ── Progress bars ── */
+            .prog-wrap {
+                background: #e9ecef;
+                border-radius: 20px;
+                height: 10px;
+                overflow: hidden;
+            }
+
+            .prog-fill {
+                height: 10px;
+                border-radius: 20px;
+            }
+
+            /* ── Skill rating dots ── */
+            .dot {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+
+            .dot-on {
+                background: var(--sky);
+            }
+
+            .dot-off {
+                background: #e0e0e0;
+            }
+
+            /* ── Score ring ── */
+            .score-ring-wrap {
+                position: relative;
+                width: 90px;
+                height: 90px;
+            }
+
+                .score-ring-wrap svg {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                }
+
+            .score-ring-inner {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* ── Promo banner ── */
+            .promo-banner {
+                background: var(--leaf);
+                color: #fff;
+                border-radius: 10px;
+                padding: 14px 20px;
+            }
+
+            /* ── Sig line ── */
+            .sig-line {
+                border-top: 1.5px solid #555;
+                width: 150px;
+                margin-top: 6px;
+            }
+
+            .sig-name {
+                font-family: 'Baloo 2', sans-serif;
+                font-size: 1.15rem;
+                color: var(--sky);
+                font-style: italic;
+            }
+
+            /* ── Attendance arc ── */
+            .att-stat {
+                background: var(--soft);
+                border: 1px solid #e0e5f0;
+                border-radius: 10px;
+                padding: 10px 14px;
+                text-align: center;
+            }
+
+            @@media print {
+                body {
+                    background: #fff;
+                }
+
+                .annual-header::before {
+                    display: none;
+                }
+            }
+    </style>
+</head>
+<body>
+    <div class="container py-3" style="max-width:100%;">
+
+        <!-- ══ HEADER ══ -->
+        <div class="annual-header rounded-3 px-4 py-4 mb-4" style="position:relative;z-index:0;">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="school-crest">
+                    @if (!string.IsNullOrEmpty(Model.Report.SchoolLogoUrl))
+                    {
+                        <img src="@Model.Report.SchoolLogoUrl" alt="Logo" style="width:76px;height:76px;border-radius:50%;object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <span>🌈</span>
+                    }
+                </div>
+                <div class="flex-grow-1">
+                    <div class="school-name">@Model.Report.SchoolName</div>
+                    <div style="font-size:0.8rem;opacity:0.7;">@Model.Report.SchoolAddress &nbsp;|&nbsp; @Model.Report.SchoolPhone &nbsp;|&nbsp; @Model.Report.SchoolEmail</div>
+                    <div class="report-label">Annual Performance Report — @Model.Report.SessionName</div>
+                </div>
+                <div class="text-end" style="font-size:0.8rem;opacity:0.85;">
+                    <div style="font-weight:700;font-size:1.1rem;">@Model.Report.ClassName</div>
+                    <div>Session: @Model.Report.SessionName</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ PUPIL INFO ══ -->
+        <div class="card-w px-4 py-3 mb-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    @if (!string.IsNullOrEmpty(Model.Report.PicturePath))
+                    {
+                        <img src="@Model.Report.PicturePath" alt="Student" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--sky);" />
+                    }
+                    else
+                    {
+                        <div style="width:56px;height:56px;background:#e0f7fa;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--sky);font-weight:800;">@initial</div>
+                    }
+                </div>
+                <div class="col">
+                    <div class="row g-2">
+                        <div class="col-sm-5"><div class="slabel">Pupil's Name</div><div style="font-weight:700;font-size:0.95rem;">@Model.Report.StudentName</div></div>
+                        <div class="col-sm-3"><div class="slabel">Adm. No.</div><div style="font-weight:700;">@Model.Report.AdmissionNumber</div></div>
+                        <div class="col-sm-2"><div class="slabel">Age</div><div style="font-weight:700;">@(Model.Report.Age) Yrs</div></div>
+                        <div class="col-sm-2"><div class="slabel">Class</div><div style="font-weight:700;">@Model.Report.ClassName</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ ANNUAL ATTENDANCE ══ -->
+        <div class="card-w px-4 py-3 mb-4">
+            <div class="slabel mb-3">Annual Attendance Summary</div>
+            <div class="row g-3">
+                <div class="col-sm-3"><div class="att-stat"><div class="slabel">1st Term</div><div style="font-size:1.3rem;font-weight:800;color:var(--sky);">@Model.Report.Term1Present/@Model.Report.Term1OutOf</div><div style="font-size:0.75rem;color:#888;">@(Model.Report.Term1OutOf.GetValueOrDefault() - Model.Report.Term1Present.GetValueOrDefault()) absent</div></div></div>
+                <div class="col-sm-3"><div class="att-stat"><div class="slabel">2nd Term</div><div style="font-size:1.3rem;font-weight:800;color:var(--sky);">@Model.Report.Term2Present/@Model.Report.Term2OutOf</div><div style="font-size:0.75rem;color:#888;">@(Model.Report.Term2OutOf.GetValueOrDefault() - Model.Report.Term2Present.GetValueOrDefault()) absent</div></div></div>
+                <div class="col-sm-3"><div class="att-stat"><div class="slabel">3rd Term</div><div style="font-size:1.3rem;font-weight:800;color:var(--sky);">@Model.Report.Term3Present/@Model.Report.Term3OutOf</div><div style="font-size:0.75rem;color:#888;">@(Model.Report.Term3OutOf.GetValueOrDefault() - Model.Report.Term3Present.GetValueOrDefault()) absent</div></div></div>
+                <div class="col-sm-3"><div class="att-stat" style="background:#e0f7fa;border-color:var(--sky);"><div class="slabel" style="color:var(--ink);">Annual Total</div><div style="font-size:1.3rem;font-weight:800;color:var(--ink);">@Model.Report.AnnualPresent/@Model.Report.AnnualOutOf</div><div style="font-size:0.75rem;color:#555;">@Model.Report.AnnualAttendancePercent.ToString("F1")% Attendance</div></div></div>
+            </div>
+        </div>
+
+        <!-- ══ ANNUAL ACADEMIC TABLE ══ -->
+        <div class="row">
+            <div class="col-8">
+                <div class="card-w mb-4">
+                    <div class="px-4 pt-3 pb-0"><div class="slabel mb-2">Annual Academic Performance</div></div>
+                    <div class="table-responsive px-3">
+                        <table class="table tbl-nur mb-0">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="vertical-align:middle;">Subject</th>
+                                    <th colspan="2" class="text-center" style="background:#0077b6;">1st Term</th>
+                                    <th colspan="2" class="text-center" style="background:#2d6a4f;">2nd Term</th>
+                                    <th colspan="2" class="text-center" style="background:#9b2226;">3rd Term</th>
+                                    <th class="text-center" style="background:#1a1a2e;">Annual<br>Avg</th>
+                                    <th class="text-center" style="background:#1a1a2e;">Grade</th>
+                                </tr>
+                                <tr>
+                                    <th class="text-center rotate-upward" style="background:#023e8a;font-size:0.72rem;">Score</th>
+                                    <th class="text-center rotate-upward" style="background:#023e8a;font-size:0.72rem;">Grd</th>
+                                    <th class="text-center rotate-upward" style="background:#1b4332;font-size:0.72rem;">Score</th>
+                                    <th class="text-center rotate-upward" style="background:#1b4332;font-size:0.72rem;">Grd</th>
+                                    <th class="text-center rotate-upward" style="background:#6a040f;font-size:0.72rem;">Score</th>
+                                    <th class="text-center rotate-upward" style="background:#6a040f;font-size:0.72rem;">Grd</th>
+                                    <th class="text-center rotate-upward" style="background:#16213e;font-size:0.72rem;">/100</th>
+                                    <th class="text-center rotate-upward" style="background:#16213e;font-size:0.72rem;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in Model.Report.Subjects) {
+                                    <tr>
+                                        <td>@s.SubjectName</td>
+                                        <td class="text-center">@s.Term1Score</td>
+                                        <td class="text-center"><span class="gb @("g" + s.Term1Grade)">@s.Term1Grade</span></td>
+                                        <td class="text-center">@s.Term2Score</td>
+                                        <td class="text-center"><span class="gb @("g" + s.Term2Grade)">@s.Term2Grade</span></td>
+                                        <td class="text-center">@s.Term3Score</td>
+                                        <td class="text-center"><span class="gb @("g" + s.Term3Grade)">@s.Term3Grade</span></td>
+                                        <td class="text-center fw-700">@s.AnnualAvg</td>
+                                        <td class="text-center"><span class="gb @("g" + s.AnnualGrade)">@s.AnnualGrade</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-5"><strong>Annual Total / Grand Average</strong></div>
+                        <div class="col-3"><span style="font-size:1.1rem;font-weight:800;color:var(--ink);">@Model.Report.GrandTotal / @Model.Report.OverallAverage%</span></div>
+                        <div class="col-4"><strong class="">@Model.Report.OverallPosition out of @Model.Report.TotalStudents</strong></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card-w p-2">
+                    <div class="slabel mb-3">Psychomotor Development</div>
+                    <table class="table table-sm table-borderless mb-0" style="font-size:0.83rem;">
+                        <thead>
+                            <tr>
+                                <th>Skill</th>
+                                <th class="text-center">Term 1</th>
+                                <th class="text-center">Term 2</th>
+                                <th class="text-center">Term 3</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var skill in Model.Report.PsychomotorSkills) {
+                                <tr>
+                                    <td>@skill.SkillName</td>
+                                    <td class="text-center">@skill.Term1Score</td>
+                                    <td class="text-center">@skill.Term2Score</td>
+                                    <td class="text-center">@skill.Term3Score</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-w p-2 mt-2">
+                    <div class="slabel mb-3">Affective / Social Development</div>
+                    <table class="table table-sm table-borderless mb-0" style="font-size:0.83rem;">
+                        <tbody>
+                            @foreach (var skill in Model.Report.AffectiveDomain) {
+                                <tr><td>@skill.SkillName</td><td class="text-end"><span class="gb gB">@skill.Term1Score</span></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ TERM-BY-TERM PERFORMANCE ══ -->
+        <div class="card-w px-4 py-3 mb-1">
+            <div class="slabel mb-3">Term-by-Term Progress (Average %)</div>
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <div class="d-flex justify-content-between mb-1"><span style="font-size:0.82rem;font-weight:600;">1st Term</span><span style="font-size:0.82rem;font-weight:700;">@Model.Report.Term1Avg%</span></div>
+                    <div class="prog-wrap"><div class="prog-fill" style="width:@Model.Report.Term1Avg%;background:#0077b6;"></div></div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="d-flex justify-content-between mb-1"><span style="font-size:0.82rem;font-weight:600;">2nd Term</span><span style="font-size:0.82rem;font-weight:700;">@Model.Report.Term2Avg%</span></div>
+                    <div class="prog-wrap"><div class="prog-fill" style="width:@Model.Report.Term2Avg%;background:#2d6a4f;"></div></div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="d-flex justify-content-between mb-1"><span style="font-size:0.82rem;font-weight:600;">3rd Term</span><span style="font-size:0.82rem;font-weight:700;">@Model.Report.Term3Avg%</span></div>
+                    <div class="prog-wrap"><div class="prog-fill" style="width:@Model.Report.Term3Avg%;background:#9b2226;"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ ANNUAL REMARKS ══ -->
+        <div class="card-w px-4 py-3 mb-1">
+            <div class="slabel mb-3">Annual Remarks</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div>@Model.Report.FormTeacherRemark</div>
+                    <div class="mt-3"><div class="sig-name">@Model.Report.FormTeacherName</div><div class="sig-line"></div><div style="font-size:0.72rem;color:#888;">Class Teacher — @Model.Report.ClassName</div></div>
+                </div>
+                <div class="col-md-6">
+                    <div>@Model.Report.PrincipalRemark</div>
+                    <div class="mt-3"><div class="sig-name">@Model.Report.PrincipalName</div><div class="sig-line"></div><div style="font-size:0.72rem;color:#888;">Head Teacher</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ PROMOTION ══ -->
+        <div class="card-w mb-1">
+            <div class="row align-items-center g-2">
+                <div class="col">
+                    <div style="font-family:'Baloo 2',sans-serif;font-size:1.2rem;font-weight:800;">ANNUAL PROMOTION DECISION</div>
+                    <div style="font-size:0.88rem;opacity:0.9;">@Model.Report.StudentName has successfully completed @Model.Report.ClassName and is hereby <strong>PROMOTED</strong> to @Model.Report.PromotedToClass for the @Model.Report.SessionName academic session.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ NEXT SESSION ══ -->
+        <div class="card-w px-4 py-3 mb-4">
+            <div class="row g-2 text-center">
+                <div class="col-sm-4"><div class="slabel">New Session Begins</div><div style="font-weight:700;">15th September, 2025</div></div>
+                <div class="col-sm-4"><div class="slabel">School Fees (2025/2026)</div><div style="font-weight:700;">₦50,000 / Term</div></div>
+                <div class="col-sm-4"><div class="slabel">Parent / Guardian Signature</div><div style="border-bottom:1.5px solid #999;height:28px;margin-top:6px;"></div></div>
+            </div>
+        </div>
+
+        <p class="text-center text-muted" style="font-size:0.7rem;">This Annual Report is computer-generated and authentic without a separate stamp. &copy; @DateTime.Now.Year @Model.Report.SchoolName</p>
+    </div>
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

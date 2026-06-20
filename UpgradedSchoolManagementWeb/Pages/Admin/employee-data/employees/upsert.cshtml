@@ -1,0 +1,107 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.employee_data.employees.upsertModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Employee" : "Add Employee";
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi @(Model.IsEdit ? "bi-pencil-square" : "bi-person-plus-fill") me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">@(Model.IsEdit ? "Update employee information" : "Register a new employee")</div>
+        </div>
+        <a asp-page="index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form method="post">
+                <input type="hidden" asp-for="Id" />
+
+                <h6 class="mb-3 mt-2" style="color:var(--accent2)"><i class="bi bi-person-lines-fill me-2"></i>Employee Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FullName" class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" placeholder="Full name" required />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Gender" class="form-label">Gender <span class="text-danger">*</span></label>
+                        <select asp-for="Gender" class="form-select" required>
+                            <option value="">Select gender…</option>
+                            <option value="1">Male</option>
+                            <option value="2">Female</option>
+                        </select>
+                        <span asp-validation-for="Gender" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="EmployeeType" class="form-label">Employee Type</label>
+                        <select asp-for="EmployeeType" class="form-select">
+                            <option value="">Select type…</option>
+                            <option value="Teaching">Teaching</option>
+                            <option value="Non-Teaching">Non-Teaching</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Academic">Academic</option>
+                            <option value="Support">Support</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Address" class="form-label">Address</label>
+                        <input asp-for="Address" class="form-control" placeholder="Address (optional)" />
+                    </div>
+                </div>
+
+                @if (!Model.IsEdit)
+                {
+                    <h6 class="mb-3 mt-4" style="color:var(--accent2)"><i class="bi bi-shield-lock-fill me-2"></i>Account</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Employee Code</label>
+                            <input type="text" class="form-control bg-light" value="Auto-generated (EMP-0001…)" disabled />
+                            <div class="form-text">A unique sequential employee code will be assigned automatically.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Password" class="form-label">Default Password <span class="text-danger">*</span></label>
+                            <input asp-for="Password" class="form-control" required />
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                            <div class="form-text">The employee can change it after first login.</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info py-2 mt-4 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Employee Code: <strong>@(Model.EmployeeCode ?? "N/A")</strong>
+                    </div>
+                }
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check2-circle me-1"></i> @(Model.IsEdit ? "Update Employee" : "Save Employee")
+                    </button>
+                    <a asp-page="index" class="btn btn-secondary px-4">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,102 @@
+@page
+@model UpsertModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Payment Category" : "Add Payment Category";
+    var cat = Model.Category;
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi @(Model.IsEdit ? "bi-pencil-square" : "bi-plus-circle-fill") me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">@(Model.IsEdit ? "Update payment category details" : "Create a new payment category")</div>
+        </div>
+        <a asp-page="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+            <form id="categoryForm">
+                <input type="hidden" id="categoryId" value="@(cat?.Id ?? 0)" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" value="@(cat?.Name)" placeholder="e.g. Tuition, Development Levy" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="isActive" name="IsActive">
+                            <option value="true" selected="@(cat == null || cat.IsActive)">Active</option>
+                            <option value="false" selected="@(cat != null && !cat.IsActive)">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="Optional description">@(cat?.Description)</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                        <i class="bi bi-check2-circle me-1"></i> @(Model.IsEdit ? "Update Category" : "Save Category")
+                    </button>
+                    <a asp-page="Index" class="btn btn-secondary px-4">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        const isEdit = @(Model.IsEdit ? "true" : "false");
+
+        $('#categoryForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const payload = {
+                Name: $('#name').val().trim(),
+                Description: $('#description').val().trim() || null,
+                IsActive: $('#isActive').val() === 'true'
+            };
+
+            const url = isEdit ? '/V1/UpdatePaymentCategory' : '/V1/CreatePaymentCategory';
+
+            if (isEdit) payload.Id = parseInt($('#categoryId').val());
+
+            $('#submitBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success) {
+                        Swal.fire({
+                            icon: 'success', title: 'Success', text: r.message,
+                            timer: 1800, showConfirmButton: false
+                        }).then(function () {
+                            window.location.href = '/Admin/Finance/Categories/Index';
+                        });
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                        $('#submitBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> ' + (isEdit ? 'Update Category' : 'Save Category'));
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'An error occurred. Please try again.', 'error');
+                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> ' + (isEdit ? 'Update Category' : 'Save Category'));
+                }
+            });
+        });
+    </script>
+}

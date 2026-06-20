@@ -1,0 +1,413 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Finance Dashboard";
+}
+
+@section Sheets{
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <style>
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--card-shadow);
+        transition: background .3s, border-color .3s;
+    }
+
+    .stat-card .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -.5px;
+        line-height: 1.2;
+    }
+
+    .stat-card .stat-label {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    .recent-payment-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .recent-payment-row:last-child {
+        border-bottom: none;
+    }
+
+    .recent-payment-row .rp-ref {
+        font-family: 'Space Mono', monospace;
+        font-size: 12px;
+    }
+</style>
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-speedometer2 me-2" style="color:var(--accent)"></i>Finance Dashboard</div>
+            <div class="mgmt-sub">Overview of fee collection and payment activity</div>
+        </div>
+        <div class="d-flex gap-2">
+            <select id="sessionFilter" class="form-select form-select-sm" style="width:150px">
+                <option value="">Select Session</option>
+            </select>
+            <select id="termFilter" class="form-select form-select-sm" style="width:130px">
+                <option value="">All Terms</option>
+                <option value="1">First Term</option>
+                <option value="2">Second Term</option>
+                <option value="3">Third Term</option>
+            </select>
+            <button class="btn-mgmt-primary" onclick="loadDashboard()">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4" id="summaryCards">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card fade-in">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="stat-icon" style="background:rgba(79,124,255,.12);color:var(--accent)">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="stat-value" id="totalExpected">0.00</div>
+                        <div class="stat-label">Total Expected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card fade-in">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="stat-icon" style="background:rgba(0,212,170,.12);color:var(--accent3)">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="stat-value" id="totalCollected">0.00</div>
+                        <div class="stat-label">Total Collected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card fade-in">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="stat-icon" style="background:rgba(255,107,107,.12);color:var(--accent4)">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="stat-value" id="outstandingBalance">0.00</div>
+                        <div class="stat-label">Outstanding Balance</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="stat-card fade-in">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="stat-icon" style="background:rgba(255,169,77,.12);color:var(--accent5)">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="stat-value" id="collectionRate">0%</div>
+                        <div class="stat-label">Collection Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-6">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-head">
+                    <h6><i class="bi bi-bar-chart-fill me-2" style="color:var(--accent2)"></i>Category Summary</h6>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-head">
+                    <h6><i class="bi bi-graph-up-arrow me-2" style="color:var(--accent2)"></i>Payment Trend</h6>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-head">
+                    <h6><i class="bi bi-clock-history me-2" style="color:var(--accent2)"></i>Recent Payments</h6>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="recentTable">
+                            <thead>
+                                <tr>
+                                    <th>Reference</th>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentPaymentsBody">
+                                <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.all.min.js"></script>
+    <script>
+        let categoryChartInstance = null;
+        let trendChartInstance = null;
+
+        function loadFilters() {
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ draw: 1, start: 0, length: 1000, search: { value: '', regex: false }, order: [{ column: 0, dir: 'asc' }], columns: [] }),
+                success: function (r) {
+                    var sel = $('#sessionFilter');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        function loadDashboard() {
+            var sessionId = $('#sessionFilter').val() ? parseInt($('#sessionFilter').val()) : null;
+            var termId = $('#termFilter').val() ? parseInt($('#termFilter').val()) : null;
+
+            $.ajax({
+                url: '/V1/GetDashboardData',
+                type: 'POST',
+                data: JSON.stringify({ SessionId: sessionId, TermId: termId }),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success && r.data) {
+                        renderDashboard(r.data);
+                    } else {
+                        Swal.fire('Error', r.message || 'Failed to load dashboard data.', 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'Failed to load dashboard data.', 'error');
+                }
+            });
+        }
+
+        function renderDashboard(d) {
+            var expected = parseFloat(d.totalExpected) || 0;
+            var collected = parseFloat(d.totalCollected) || 0;
+            var outstanding = expected - collected;
+            var rate = expected > 0 ? ((collected / expected) * 100) : 0;
+
+            $('#totalExpected').text(expected.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#totalCollected').text(collected.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#outstandingBalance').text(outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            $('#collectionRate').text(rate.toFixed(1) + '%');
+
+            renderCategoryChart(d.categorySummary || []);
+            renderTrendChart(d.trendData || []);
+            renderRecentPayments(d.recentPayments || []);
+        }
+
+        function renderCategoryChart(data) {
+            var ctx = document.getElementById('categoryChart').getContext('2d');
+
+            if (categoryChartInstance) {
+                categoryChartInstance.destroy();
+            }
+
+            var labels = data.map(function (d) { return d.categoryName || 'N/A'; });
+            var expectedData = data.map(function (d) { return parseFloat(d.expected) || 0; });
+            var collectedData = data.map(function (d) { return parseFloat(d.collected) || 0; });
+
+            categoryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Expected',
+                            data: expectedData,
+                            backgroundColor: 'rgba(79,124,255,.7)',
+                            borderColor: 'rgba(79,124,255,1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Collected',
+                            data: collectedData,
+                            backgroundColor: 'rgba(0,212,170,.7)',
+                            borderColor: 'rgba(0,212,170,1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: getComputedStyle(document.body).getPropertyValue('--text2').trim(), font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--muted').trim(), font: { size: 11 } },
+                            grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim() }
+                        },
+                        y: {
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--muted').trim(), font: { size: 11 } },
+                            grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim() }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTrendChart(data) {
+            var ctx = document.getElementById('trendChart').getContext('2d');
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            var labels = data.map(function (d) { return d.label || ''; });
+            var values = data.map(function (d) { return parseFloat(d.amount) || 0; });
+
+            var gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, 'rgba(124,92,252,.35)');
+            gradient.addColorStop(1, 'rgba(124,92,252,0)');
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Collection',
+                        data: values,
+                        borderColor: 'rgba(124,92,252,1)',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: .4,
+                        pointBackgroundColor: 'rgba(124,92,252,1)',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--muted').trim(), font: { size: 11 } },
+                            grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim() }
+                        },
+                        y: {
+                            ticks: { color: getComputedStyle(document.body).getPropertyValue('--muted').trim(), font: { size: 11 } },
+                            grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim() }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderRecentPayments(data) {
+            var body = $('#recentPaymentsBody');
+            body.empty();
+
+            if (!data || !data.length) {
+                body.append('<tr><td colspan="7" class="text-center text-muted">No recent payments</td></tr>');
+                return;
+            }
+
+            var statusMap = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
+
+            data.forEach(function (p) {
+                var dt = p.paymentDate ? new Date(p.paymentDate) : null;
+                var dateStr = dt ? dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '--';
+                var amt = parseFloat(p.totalAmount) || 0;
+
+                body.append('<tr>' +
+                    '<td class="font-monospace small">' + (p.reference || '--') + '</td>' +
+                    '<td>' + (p.studentName || '--') + '</td>' +
+                    '<td>' + (p.className || '--') + '</td>' +
+                    '<td class="text-end">' + amt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                    '<td><span class="badge bg-' + (statusMap[p.status] || 'secondary') + '">' + (p.status || '--') + '</span></td>' +
+                    '<td class="small">' + dateStr + '</td>' +
+                    '<td class="text-center"><a href="/Admin/Finance/Payments/Detail?id=' + p.id + '" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>' +
+                    '</tr>');
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+            loadDashboard();
+
+            $('#sessionFilter, #termFilter').on('change', function () {
+                loadDashboard();
+            });
+        });
+    </script>
+}

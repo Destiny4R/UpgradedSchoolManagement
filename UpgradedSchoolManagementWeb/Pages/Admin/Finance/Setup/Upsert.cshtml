@@ -1,0 +1,217 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Setup.UpsertModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit Payment Setup" : "Add Payment Setup";
+}
+@section Sheets{
+    <link href="~/lib/jquery-multiselect-master/jquery.multiselect.css" rel="stylesheet" />
+}
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title">
+                <i class="bi @(Model.IsEdit ? "bi-pencil-square" : "bi-plus-circle-fill") me-2" style="color:var(--accent)"></i>
+                @ViewData["Title"]
+            </div>
+            <div class="mgmt-sub">@(Model.IsEdit ? "Update payment amount configuration" : "Configure fee amount for a payment item")</div>
+        </div>
+        <a asp-page="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-body">
+
+            @* ── SweetAlert feedback (TempData) ── *@
+            @if (TempData["Error"] != null)
+            {
+                <div id="tempErrorMsg" class="d-none">@TempData["Error"]</div>
+            }
+
+            <form method="post" asp-page-handler="@(Model.IsEdit ? "Update" : "Save")" id="setupForm">
+
+                @* Hidden Id for edit *@
+                <input type="hidden" asp-for="Input.Id" />
+
+                <div class="row g-3">
+
+                    @* ── Payment Item ── *@
+                    <div class="col-md-6">
+                        <label asp-for="Input.PaymentItemId" class="form-label">
+                            Payment Item <span class="text-danger">*</span>
+                        </label>
+                        @if (Model.IsEdit)
+                        {
+                            @* Show as read-only text in edit; pass value via hidden *@
+                            <input type="text" class="form-control" readonly
+                                   value="@(Model.Setup?.PaymentItemName ?? Model.Items.FirstOrDefault(i => i.Id == Model.Input.PaymentItemId)?.Name)" />
+                            <input type="hidden" asp-for="Input.PaymentItemId" />
+                        }
+                        else
+                        {
+                            <select class="form-select" asp-for="Input.PaymentItemId" required>
+                                <option value="">-- Select Item --</option>
+                                @foreach (var paymentItem in Model.Items)
+                                {
+                                    <option value="@paymentItem.Id" data-category="@paymentItem.CategoryName">
+                                        @paymentItem.Name (@paymentItem.CategoryName)
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="Input.PaymentItemId" class="text-danger small"></span>
+                        }
+                    </div>
+
+                    @* ── Academic Session ── *@
+                    <div class="col-md-3">
+                        <label asp-for="Input.SessionId" class="form-label">
+                            Academic Session <span class="text-danger">*</span>
+                        </label>
+                        @if (Model.IsEdit)
+                        {
+                            <input type="text" class="form-control" readonly
+                                   value="@(Model.Setup?.SessionName)" />
+                            <input type="hidden" asp-for="Input.SessionId" />
+                        }
+                        else
+                        {
+                            <select class="form-select" asp-for="Input.SessionId" asp-items="Model.SelectionView.AcademicSession" required>
+                                <option value="">-- Select --</option>
+                            </select>
+                            <span asp-validation-for="Input.SessionId" class="text-danger small"></span>
+                        }
+                    </div>
+
+                    @* ── Term ── *@
+                    <div class="col-md-3">
+                        <label asp-for="Input.Term" class="form-label">
+                            Term <span class="text-danger">*</span>
+                        </label>
+                        @if (Model.IsEdit)
+                        {
+                            <input type="text" class="form-control" readonly
+                                   value="@(Model.Setup?.TermName)" />
+                            <input type="hidden" asp-for="Input.Term" />
+                        }
+                        else
+                        {
+                            <select class="form-select" asp-for="Input.Term" asp-items="Model.SelectionView.Terms" required>
+                                <option value="">-- Select Term--</option>
+                            </select>
+                            <span asp-validation-for="Input.Term" class="text-danger small"></span>
+                        }
+                    </div>
+
+                    @* ── Class(es) ── *@
+                    <div class="@(Model.IsEdit ? "col-md-6" : "col-md-12")">
+                        <label class="form-label">
+                            @(Model.IsEdit ? "Class" : "Classes")
+                            @if (!Model.IsEdit) { <span class="text-muted small"> (select one or more)</span> }
+                            <span class="text-danger">*</span>
+                        </label>
+                        @if (Model.IsEdit)
+                        {
+                            @* Single class in edit – shown as read-only text *@
+                            <input type="text" class="form-control" readonly
+                                   value="@(Model.Setup?.ClassName)" />
+                            <input type="hidden" asp-for="Input.ClassId" />
+                        }
+                        else
+                        {
+                            @* Multi-select for batch create, enhanced by jquery-multiselect *@
+                            <select id="classIds" name="Input.ClassIds" multiple
+                                    asp-items="Model.SelectionView.SchoolClasses" class="form-select" style="width:100%">
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple classes for batch setup</div>
+                        }
+                    </div>
+
+                    @* ── Amount ── *@
+                    <div class="col-md-4">
+                        <label asp-for="Input.Amount" class="form-label">
+                            Amount (&#8358;) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" asp-for="Input.Amount"
+                               step="0.01" min="0.01" required placeholder="0.00" />
+                        <span asp-validation-for="Input.Amount" class="text-danger small"></span>
+                    </div>
+
+                    @* ── Compulsory toggle ── *@
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" asp-for="Input.IsCompulsory" />
+                            <label class="form-check-label" asp-for="Input.IsCompulsory">
+                                <strong>Compulsory</strong>
+                                <span class="text-muted small d-block">Must be paid before results are viewable</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    @* ── IsActive toggle (edit only) ── *@
+                    @if (Model.IsEdit)
+                    {
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" asp-for="Input.IsActive" />
+                                <label class="form-check-label" asp-for="Input.IsActive">Active</label>
+                            </div>
+                        </div>
+                    }
+
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                        <i class="bi bi-check2-circle me-1"></i>
+                        @(Model.IsEdit ? "Update Setup" : "Save Setup")
+                    </button>
+                    <a asp-page="Index" class="btn btn-secondary px-4">Cancel</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/jquery-multiselect-master/jquery.multiselect.js"></script>
+    <script>
+        $(document).ready(function () {
+
+            // ── Multiselect plugin for batch-create class picker ──
+            @if (!Model.IsEdit)
+            {
+                <text>
+                $('#classIds').multiselect({
+                    columns: 2,
+                    placeholder: 'Select Classes',
+                    search: true,
+                    searchOptions: { 'default': 'Search Class' },
+                    selectAll: true
+                });
+                </text>
+            }
+
+            // ── Spinner UX on form submit ──
+            $('#setupForm').on('submit', function () {
+                var btn = $('#submitBtn');
+                btn.prop('disabled', true)
+                   .html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+            });
+
+            // ── Show server-side error via SweetAlert (TempData) ──
+            var errorMsg = $('#tempErrorMsg').text().trim();
+            if (errorMsg) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMsg
+                });
+            }
+        });
+    </script>
+}

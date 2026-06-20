@@ -1,0 +1,581 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.result_manager.manage_informationModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Manage Information";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/flatpickr/flatpickr.min.css" rel="stylesheet" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+<style>
+    .nav-school-tab .nav-link { color: var(--text); border: none; padding: 0.75rem 1.25rem; font-weight: 500; }
+    .nav-school-tab .nav-link.active { color: var(--accent); border-bottom: 3px solid var(--accent); background: transparent; }
+    .nav-school-tab .nav-link:hover:not(.active) { border-bottom: 3px solid var(--muted); }
+    #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 9999; display: none; align-items: center; justify-content: center; }
+    #loading-overlay.show { display: flex; }
+    #loading-overlay .spinner-border { width: 3rem; height: 3rem; }
+</style>
+
+<div id="loading-overlay">
+    <div class="text-center">
+        <div class="spinner-border text-light" role="status"></div>
+        <p class="text-light mt-2 fw-semibold">Processing...</p>
+    </div>
+</div>
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-info-circle-fill me-2" style="color:var(--accent)"></i>@ViewData["Title"]</div>
+            <div class="mgmt-sub">Configure term general and class-level information</div>
+        </div>
+        <a asp-page="index" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-2"></i> Back</a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i><strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i><strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <ul class="nav nav-school-tab mb-3" id="infoTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="nav-school-tab" data-bs-toggle="tab" data-bs-target="#nav-school" type="button" role="tab">
+                <i class="bi bi-building me-1"></i> Term General Info
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="nav-class-info-tab" data-bs-toggle="tab" data-bs-target="#nav-class-info" type="button" role="tab">
+                <i class="bi bi-book me-1"></i> Class Term Info
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="infoTabContent">
+
+        <div class="tab-pane fade show active" id="nav-school" role="tabpanel">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+                    <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>Term General Information</h6>
+                    <button type="button" class="btn-mgmt-primary btn-sm" onclick="showTermGenCreateModal()">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="table-responsive">
+                        <table id="termGenTable" class="table w-100">
+                            <thead>
+                                <tr>
+                                    <th>S/N</th>
+                                    <th>Term</th>
+                                    <th>Session</th>
+                                    <th>Days School Open</th>
+                                    <th>Principal</th>
+                                    <th>Next Term Start</th>
+                                    <th>Next Term End</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="nav-class-info" role="tabpanel">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+                    <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>Class Term Information</h6>
+                    <button type="button" class="btn-mgmt-primary btn-sm" onclick="showClassInfoCreateModal()">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                </div>
+                <div class="mgmt-card-body">
+                    <div class="table-responsive">
+                        <table id="classInfoTable" class="table w-100">
+                            <thead>
+                                <tr>
+                                    <th>S/N</th>
+                                    <th>Term</th>
+                                    <th>Class</th>
+                                    <th>Sub Class</th>
+                                    <th>Session</th>
+                                    <th>Next Term Fees</th>
+                                    <th>Class Teacher</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@* MODAL – Term General Information *@
+<div class="modal fade" id="termGenModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termGenModalTitle">Add Term General Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="termGenForm">
+                <div class="modal-body">
+                    <input type="hidden" id="termGenId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="termGenTerm" class="form-label">Term <span class="text-danger">*</span></label>
+                            <select class="form-select" id="termGenTerm" required>
+                                <option value="">Choose Term</option>
+                                @foreach (var t in Model.SelectionView?.Terms ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@t.Value">@t.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="termGenSession" class="form-label">Session <span class="text-danger">*</span></label>
+                            <select class="form-select" id="termGenSession" required>
+                                <option value="">Choose Session</option>
+                                @foreach (var s in Model.SelectionView?.AcademicSession ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@s.Value">@s.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="termGenDaysOpen" class="form-label">Days School Open <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="termGenDaysOpen" min="1" required />
+                        </div>
+                        <div class="col-md-12">
+                            <label for="termGenNextStart" class="form-label">Next Term Start <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="termGenNextStart" required />
+                        </div>
+                        <div class="col-md-12">
+                            <label for="termGenNextEnd" class="form-label">Next Term End <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="termGenNextEnd" required />
+                        </div>
+                        <div class="col-md-12">
+                            <label for="termGenPrincipal" class="form-label">Principal Name</label>
+                            <input type="text" class="form-control" id="termGenPrincipal" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="termGenSaveBtn">
+                        <i class="bi bi-check2-circle me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* MODAL – Class Term Information *@
+<div class="modal fade" id="classInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="classInfoModalTitle">Add Class Term Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="classInfoForm">
+                <div class="modal-body">
+                    <input type="hidden" id="classInfoId" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="classInfoTerm" class="form-label">Term <span class="text-danger">*</span></label>
+                            <select class="form-select" id="classInfoTerm" required>
+                                <option value="">Choose Term</option>
+                                @foreach (var t in Model.SelectionView?.Terms ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@t.Value">@t.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classInfoSession" class="form-label">Session <span class="text-danger">*</span></label>
+                            <select class="form-select" id="classInfoSession" required>
+                                <option value="">Choose Session</option>
+                                @foreach (var s in Model.SelectionView?.AcademicSession ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@s.Value">@s.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classInfoClass" class="form-label">Class <span class="text-danger">*</span></label>
+                            <select class="form-select" id="classInfoClass" required>
+                                <option value="">Choose Class</option>
+                                @foreach (var c in Model.SelectionView?.SchoolClasses ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@c.Value">@c.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classInfoSubClass" class="form-label">Sub Class <span class="text-danger">*</span></label>
+                            <select class="form-select" id="classInfoSubClass" required>
+                                <option value="">Choose Sub Class</option>
+                                @foreach (var s in Model.SelectionView?.SubClass ?? Enumerable.Empty<SelectListItem>())
+                                {
+                                    <option value="@s.Value">@s.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classInfoFees" class="form-label">Next Term Fees (₦) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="classInfoFees" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="classInfoTeacher" class="form-label">Class Teacher <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="classInfoTeacher" maxlength="450" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="classInfoSaveBtn">
+                        <i class="bi bi-check2-circle me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script src="~/lib/flatpickr/flatpickr.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        let termGenTable, classInfoTable;
+
+        $(document).ready(function () {
+            initTermGenTable();
+            initClassInfoTable();
+            $('#termGenForm').on('submit', function (e) { e.preventDefault(); submitTermGenForm(); });
+            $('#classInfoForm').on('submit', function (e) { e.preventDefault(); submitClassInfoForm(); });
+        });
+
+        function showLoading() { $('#loading-overlay').addClass('show'); }
+        function hideLoading() { $('#loading-overlay').removeClass('show'); }
+
+        function setButtonLoading(btnId, loading) {
+            const btn = $('#' + btnId);
+            if (loading) {
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+            } else {
+                btn.prop('disabled', false).html('<i class="bi bi-check2-circle me-1"></i> Save');
+            }
+        }
+
+        $('#termGenModal').on('shown.bs.modal', function () {
+            ['termGenNextStart', 'termGenNextEnd'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el && el._flatpickr) el._flatpickr.destroy();
+            });
+            flatpickr("#termGenNextStart", { enableTime: false, dateFormat: "Y-m-d" });
+            flatpickr("#termGenNextEnd", { enableTime: false, dateFormat: "Y-m-d" });
+        });
+
+        @* ── Term General Information – DataTable ── *@
+        function initTermGenTable() {
+            termGenTable = $('#termGenTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetTermGeneralInformations',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'term', width: '80px' },
+                    { data: 'session', width: '120px' },
+                    { data: 'daySchoolOpen', width: '80px' },
+                    { data: 'principalName', width: '150px' },
+                    { data: 'nextTermStart', render: function (d) { return d ? new Date(d).toLocaleDateString('en-GB') : ''; }, width: '130px' },
+                    { data: 'nextTermEnd', render: function (d) { return d ? new Date(d).toLocaleDateString('en-GB') : ''; }, width: '130px' },
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="editTermGen(${data})"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteTermGen(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        },
+                        orderable: false, width: '80px'
+                    }
+                ],
+                order: [[5, 'desc']]
+            });
+        }
+
+        @* ── Term General Information – CRUD ── *@
+        function showTermGenCreateModal() {
+            $('#termGenModalTitle').text('Add Term General Info');
+            $('#termGenId').val('0');
+            $('#termGenTerm').val('');
+            $('#termGenSession').val('');
+            $('#termGenDaysOpen').val('');
+            $('#termGenNextStart').val('');
+            $('#termGenNextEnd').val('');
+            $('#termGenPrincipal').val('');
+            $('#termGenModal').modal('show');
+        }
+
+        function editTermGen(id) {
+            showLoading();
+            $.ajax({
+                url: '/V1/GetTermGeneralInformationById',
+                type: 'POST',
+                data: JSON.stringify({ id: id }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    hideLoading();
+                    if (r.success) {
+                        $('#termGenModalTitle').text('Edit Term General Info');
+                        $('#termGenId').val(r.data.id);
+                        $('#termGenTerm').val(r.data.term);
+                        $('#termGenSession').val(r.data.sessionId);
+                        $('#termGenDaysOpen').val(r.data.daySchoolOpen);
+                        $('#termGenNextStart').val(r.data.nextTermStart ? r.data.nextTermStart.substring(0, 10) : '');
+                        $('#termGenNextEnd').val(r.data.nextTermEnd ? r.data.nextTermEnd.substring(0, 10) : '');
+                        $('#termGenPrincipal').val(r.data.principalName || '');
+                        $('#termGenModal').modal('show');
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { hideLoading(); Swal.fire('Error', 'Failed to load record.', 'error'); }
+            });
+        }
+
+        function submitTermGenForm() {
+            const id = parseInt($('#termGenId').val()) || 0;
+            const data = {
+                Id: id,
+                Term: parseInt($('#termGenTerm').val()),
+                SessionId: parseInt($('#termGenSession').val()),
+                DaySchoolOpen: parseInt($('#termGenDaysOpen').val()) || 0,
+                NextTermStart: $('#termGenNextStart').val(),
+                NextTermEnd: $('#termGenNextEnd').val(),
+                PrincipalName: $('#termGenPrincipal').val()
+            };
+            if (!data.Term || !data.SessionId || !data.NextTermStart || !data.NextTermEnd) {
+                Swal.fire('Validation', 'Please fill all required fields.', 'warning');
+                return;
+            }
+            const url = id === 0 ? '/V1/CreateTermGeneralInformation' : '/V1/UpdateTermGeneralInformation';
+            setButtonLoading('termGenSaveBtn', true);
+            $.ajax({
+                url: url, type: 'POST', data: JSON.stringify(data), contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    setButtonLoading('termGenSaveBtn', false);
+                    if (r.success) {
+                        Swal.fire({ icon: 'success', title: 'Success', text: r.message, timer: 2000, showConfirmButton: false });
+                        $('#termGenModal').modal('hide');
+                        termGenTable.ajax.reload();
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { setButtonLoading('termGenSaveBtn', false); Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        }
+
+        function deleteTermGen(id) {
+            Swal.fire({
+                title: 'Delete Record?', text: 'This action cannot be undone.', icon: 'warning',
+                showCancelButton: true, confirmButtonColor: 'var(--accent4)', cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    showLoading();
+                    $.ajax({
+                        url: '/V1/DeleteTermGeneralInformation', type: 'POST',
+                        data: JSON.stringify({ Id: id }), contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            hideLoading();
+                            if (r.success) {
+                                Swal.fire({ icon: 'success', title: 'Deleted!', text: r.message, timer: 2000, showConfirmButton: false });
+                                termGenTable.ajax.reload();
+                            } else {
+                                Swal.fire('Error', r.message, 'error');
+                            }
+                        },
+                        error: function () { hideLoading(); Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+
+        @* ── Class Term Information – DataTable ── *@
+        function initClassInfoTable() {
+            classInfoTable = $('#classInfoTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetClassTermInformations',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'term', width: '70px' },
+                    { data: 'schoolClass', width: '100px' },
+                    { data: 'subClass', width: '100px' },
+                    { data: 'session', width: '120px' },
+                    { data: 'nextTermFees', render: function (d) { return '₦' + (d || 0).toLocaleString(); }, width: '120px' },
+                    { data: 'classTeacherName', width: '150px' },
+                    {
+                        data: 'id',
+                        render: function (data, type, row) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="editClassInfo(${data})"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteClassInfo(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        },
+                        orderable: false, width: '80px'
+                    }
+                ],
+                order: [[0, 'asc']]
+            });
+        }
+
+        @* ── Class Term Information – CRUD ── *@
+        function showClassInfoCreateModal() {
+            $('#classInfoModalTitle').text('Add Class Term Info');
+            $('#classInfoId').val('0');
+            $('#classInfoTerm').val('');
+            $('#classInfoClass').val('');
+            $('#classInfoSubClass').val('');
+            $('#classInfoSession').val('');
+            $('#classInfoFees').val('');
+            $('#classInfoTeacher').val('');
+            $('#classInfoModal').modal('show');
+        }
+
+        function editClassInfo(id) {
+            showLoading();
+            $.ajax({
+                url: '/V1/GetClassTermInformationById',
+                type: 'POST',
+                data: JSON.stringify({ id: id }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    hideLoading();
+                    if (r.success) {
+                        $('#classInfoModalTitle').text('Edit Class Term Info');
+                        $('#classInfoId').val(r.data.id);
+                        $('#classInfoTerm').val(r.data.term);
+                        $('#classInfoClass').val(r.data.schoolClassId);
+                        $('#classInfoSubClass').val(r.data.subClassId);
+                        $('#classInfoSession').val(r.data.sessionId);
+                        $('#classInfoFees').val(r.data.nextTermFees);
+                        $('#classInfoTeacher').val(r.data.classTeacherName);
+                        $('#classInfoModal').modal('show');
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { hideLoading(); Swal.fire('Error', 'Failed to load record.', 'error'); }
+            });
+        }
+
+        function submitClassInfoForm() {
+            const id = parseInt($('#classInfoId').val()) || 0;
+            const data = {
+                Id: id,
+                Term: parseInt($('#classInfoTerm').val()),
+                SchoolClassId: parseInt($('#classInfoClass').val()),
+                SubClassId: parseInt($('#classInfoSubClass').val()),
+                SessionId: parseInt($('#classInfoSession').val()),
+                NextTermFees: parseFloat($('#classInfoFees').val()) || 0,
+                ClassTeacherName: $('#classInfoTeacher').val().trim()
+            };
+            if (!data.Term || !data.SchoolClassId || !data.SubClassId || !data.SessionId || !data.ClassTeacherName) {
+                Swal.fire('Validation', 'Please fill all required fields.', 'warning');
+                return;
+            }
+            const url = id === 0 ? '/V1/CreateClassTermInformation' : '/V1/UpdateClassTermInformation';
+            setButtonLoading('classInfoSaveBtn', true);
+            $.ajax({
+                url: url, type: 'POST', data: JSON.stringify(data), contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    setButtonLoading('classInfoSaveBtn', false);
+                    if (r.success) {
+                        Swal.fire({ icon: 'success', title: 'Success', text: r.message, timer: 2000, showConfirmButton: false });
+                        $('#classInfoModal').modal('hide');
+                        classInfoTable.ajax.reload();
+                    } else {
+                        Swal.fire('Error', r.message, 'error');
+                    }
+                },
+                error: function () { setButtonLoading('classInfoSaveBtn', false); Swal.fire('Error', 'An error occurred.', 'error'); }
+            });
+        }
+
+        function deleteClassInfo(id) {
+            Swal.fire({
+                title: 'Delete Record?', text: 'This action cannot be undone.', icon: 'warning',
+                showCancelButton: true, confirmButtonColor: 'var(--accent4)', cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    showLoading();
+                    $.ajax({
+                        url: '/V1/DeleteClassTermInformation', type: 'POST',
+                        data: JSON.stringify({ Id: id }), contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            hideLoading();
+                            if (r.success) {
+                                Swal.fire({ icon: 'success', title: 'Deleted!', text: r.message, timer: 2000, showConfirmButton: false });
+                                classInfoTable.ajax.reload();
+                            } else {
+                                Swal.fire('Error', r.message, 'error');
+                            }
+                        },
+                        error: function () { hideLoading(); Swal.fire('Error', 'An error occurred.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}
+

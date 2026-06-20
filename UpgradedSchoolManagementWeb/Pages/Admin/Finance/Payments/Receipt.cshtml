@@ -1,0 +1,266 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments.ReceiptModel
+@{
+    ViewData["Title"] = "Payment Receipt";
+}
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        .receipt-page { box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+        .receipt-body { padding: 20px !important; }
+        @@page { margin: 15mm; }
+    }
+
+    .receipt-page {
+        max-width: 800px;
+        margin: 0 auto;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+    }
+
+    .receipt-header {
+        text-align: center;
+        padding: 30px 30px 20px;
+        border-bottom: 2px dashed var(--border);
+    }
+
+    .receipt-header .school-name {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -.3px;
+    }
+
+    .receipt-header .receipt-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--accent);
+        margin-top: 6px;
+    }
+
+    .receipt-header .receipt-meta {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .receipt-body {
+        padding: 24px 30px;
+    }
+
+    .receipt-section {
+        margin-bottom: 20px;
+    }
+
+    .receipt-section h6 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent2);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 6px;
+        margin-bottom: 10px;
+    }
+
+    .receipt-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .receipt-table th,
+    .receipt-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .receipt-table th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .receipt-table tfoot td {
+        font-weight: 700;
+        border-bottom: none;
+        border-top: 2px solid var(--border);
+    }
+
+    .receipt-status {
+        display: inline-block;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .receipt-print-btn {
+        text-align: center;
+        padding: 20px 30px;
+    }
+</style>
+
+<div class="mgmt-page no-print">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-printer me-2" style="color:var(--accent)"></i>Payment Receipt</div>
+            <div class="mgmt-sub">Printable payment receipt</div>
+        </div>
+        <a asp-page="Detail" asp-route-id="" class="btn btn-outline-secondary" id="backLink">
+            <i class="bi bi-arrow-left me-1"></i> Back to Detail
+        </a>
+    </div>
+</div>
+
+<div class="mgmt-page" style="padding-top:0">
+    <div class="receipt-page fade-in">
+        <div class="receipt-header">
+            <!-- ══ Add School Logo from Appsettings.json here ══ -->
+            <div class="school-name"><i class="bi bi-mortarboard-fill me-2" style="color:var(--accent)"></i><span id="schoolName">School Name</span></div>
+            <div class="receipt-title">&#9749; OFFICIAL RECEIPT</div>
+            <div class="receipt-meta">
+                Receipt No: <span class="fw-semibold font-monospace" id="receiptNo">--</span>
+                &nbsp;&middot;&nbsp;
+                Date: <span class="fw-semibold" id="receiptDate">--</span>
+            </div>
+        </div>
+
+        <div class="receipt-body">
+            <div class="receipt-section">
+                <h6>Student Information</h6>
+                <div class="row g-2">
+                    <div class="col-sm-6"><strong>Name:</strong> <span id="studentName">--</span></div>
+                    <div class="col-sm-6"><strong>Admission No:</strong> <span id="admissionNo">--</span></div>
+                    <div class="col-sm-6"><strong>Class:</strong> <span id="className">--</span></div>
+                    <div class="col-sm-6"><strong>Session / Term:</strong> <span id="sessionTerm">--</span></div>
+                </div>
+            </div>
+
+            <div class="receipt-section">
+                <h6>Payment Items</h6>
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiptItemsBody"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end">Total Paid</td>
+                            <td class="text-end" id="totalDisplay">0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="receipt-section">
+                <h6>Payment Details</h6>
+                <div class="row g-2">
+                    <div class="col-sm-6"><strong>Reference:</strong> <span class="font-monospace" id="reference">--</span></div>
+                    <div class="col-sm-6"><strong>Status:</strong> <span id="statusDisplay">--</span></div>
+                    <div class="col-sm-6"><strong>Payment Date:</strong> <span id="paymentDate">--</span></div>
+                    <div class="col-sm-6"><strong>Platform:</strong> <span id="platform">--</span></div>
+                </div>
+            </div>
+
+            <div class="receipt-section" id="narrationSection" style="display:none">
+                <h6>Narration</h6>
+                <p class="mb-0" id="narrationText">--</p>
+            </div>
+        </div>
+
+        <div class="receipt-print-btn no-print">
+            <button class="btn-mgmt-primary" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Print Receipt
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const paymentId = params.get('id');
+
+        if (!paymentId) {
+            Swal.fire('Error', 'No payment ID provided.', 'error').then(function () {
+                window.close();
+            });
+        }
+
+        $('#backLink').attr('href', '/Admin/Finance/Payments/Detail?id=' + paymentId);
+
+        function loadReceipt() {
+            $.ajax({
+                url: '/V1/GetPaymentDetail',
+                type: 'POST',
+                data: JSON.stringify({ Id: parseInt(paymentId) }),
+                contentType: 'application/json',
+                success: function (r) {
+                    if (r.success && r.data) {
+                        renderReceipt(r.data);
+                    } else {
+                        Swal.fire('Error', r.message || 'Receipt not found.', 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'Failed to load receipt.', 'error');
+                }
+            });
+        }
+
+        function renderReceipt(d) {
+            var dateStr = d.paymentDate || '';
+            var dte = dateStr ? new Date(dateStr) : new Date();
+            var formattedDate = dte.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+            $('#schoolName').text(d.schoolName || 'School Name');
+            $('#receiptNo').text(d.reference || '--');
+            $('#receiptDate').text(formattedDate);
+            $('#studentName').text(d.studentName || '--');
+            $('#admissionNo').text(d.admissionNo || '--');
+            $('#className').text(d.className || '--');
+            $('#sessionTerm').text((d.sessionName || '') + ' - ' + (d.termName || ''));
+            $('#reference').text(d.reference || '--');
+            $('#paymentDate').text(formattedDate);
+            $('#platform').text(d.paymentPlatform || '--');
+
+            var statusMap = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
+            var badgeClass = statusMap[d.status] || 'secondary';
+            $('#statusDisplay').html('<span class="receipt-status bg-' + badgeClass + '">' + (d.status || '--') + '</span>');
+
+            if (d.narration) {
+                $('#narrationText').text(d.narration);
+                $('#narrationSection').show();
+            }
+
+            var total = 0;
+            var body = $('#receiptItemsBody');
+            body.empty();
+            if (d.items && d.items.length) {
+                d.items.forEach(function (item, i) {
+                    var amt = parseFloat(item.amountPaid) || 0;
+                    total += amt;
+                    body.append('<tr>' +
+                        '<td>' + (i + 1) + '</td>' +
+                        '<td>' + (item.itemName || '--') + '</td>' +
+                        '<td>' + (item.categoryName || '--') + '</td>' +
+                        '<td class="text-end">' + amt.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+                        '</tr>');
+                });
+            }
+            $('#totalDisplay').text(total.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+        }
+
+        $(document).ready(function () {
+            loadReceipt();
+        });
+    </script>
+}

@@ -1,0 +1,203 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.admin.student_data.parent_data.indexModel
+@{
+    ViewData["Title"] = "Parents / Guardians";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-people-fill me-2" style="color:var(--accent)"></i>Parents / Guardians</div>
+            <div class="mgmt-sub">Manage parent and guardian records</div>
+        </div>
+        <a asp-page="/Admin/student-data/parent-data/upsert" class="btn-mgmt-primary">
+            <i class="bi bi-plus-lg"></i> Add Parent
+        </a>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>All Parents / Guardians</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="parentsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Full Name</th>
+                            <th>Relationship</th>
+                            <th>Phone 1</th>
+                            <th>Phone 2</th>
+                            <th>Occupation</th>
+                            <th>Wards</th>
+                            <th>Registered</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal fade" id="parentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Parent / Guardian Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="parentDetailBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading details...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        let parentsTable;
+
+        $(document).ready(function () {
+            parentsTable = $('#parentsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetParents',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: null, render: function (d, t, r, m) { return m.row + m.settings._iDisplayStart + 1; }, orderable: false, width: '50px' },
+                    { data: 'fullName' },
+                    { data: 'relationship', width: '120px' },
+                    { data: 'phone1', width: '150px' },
+                    { data: 'phone2', width: '150px', render: function (d) { return d || '<span class="text-muted">—</span>'; } },
+                    { data: 'occupation', render: function (d) { return d || '<span class="text-muted">—</span>'; } },
+                    {
+                        data: null, width: '200px',
+                        render: function (data, type, row) {
+                            var children = row.children;
+                            if (!children || children.length === 0) return '<span class="text-muted fst-italic">No wards</span>';
+                            var html = '';
+                            for (var i = 0; i < children.length; i++) {
+                                var c = children[i];
+                                html += '<div><span class="fw-semibold">' + (c.fullName || '') + '</span> <span class="badge bg-secondary">' + (c.admissionNumber || '—') + '</span></div>';
+                            }
+                            return html;
+                        }
+                    },
+                    { data: 'createdAt', render: function (d) { if (!d) return ''; var dt = new Date(d); return dt.getDate().toString().padStart(2,'0') + '-' + dt.toLocaleString('en-GB',{month:'short'}) + '-' + dt.getFullYear(); }, width: '100px' },
+                    {
+                        data: 'id', orderable: false, width: '100px',
+                        render: function (data) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="viewParent(${data})"><i class="bi bi-eye"></i>View</a></li>
+                                    <li><a class="dropdown-item" href="/Admin/student-data/parent-data/upsert?id=${data}"><i class="bi bi-pencil-square"></i>Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="confirmDelete(${data})"><i class="bi bi-trash3"></i>Delete</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[1, 'asc']]
+            });
+        });
+
+        function viewParent(id) {
+            $('#parentDetailBody').html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Loading details...</p></div>');
+            $('#parentDetailModal').modal('show');
+
+            $.ajax({
+                url: '/V1/GetParent',
+                type: 'POST',
+                data: JSON.stringify({ Id: id }),
+                contentType: 'application/json',
+                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                success: function (r) {
+                    if (r.success) {
+                        const p = r.data;
+                        var childrenHtml = '';
+                        if (p.children && p.children.length > 0) {
+                            childrenHtml = '<ul class="list-group list-group-flush">';
+                            p.children.forEach(function (c) {
+                                childrenHtml += '<li class="list-group-item d-flex align-items-center gap-2"><i class="bi bi-person-vcard text-primary"></i><div><strong>' + c.fullName + '</strong><br><span class="badge bg-secondary">' + (c.admissionNumber || '—') + '</span></div></li>';
+                            });
+                            childrenHtml += '</ul>';
+                        } else {
+                            childrenHtml = '<p class="text-muted fst-italic mb-0">No wards linked to this parent.</p>';
+                        }
+
+                        $('#parentDetailBody').html(
+                            '<div class="row g-3 mb-3">' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Full Name</label><div class="fw-semibold">' + (p.fullName || '—') + '</div></div>' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Relationship</label><div class="fw-semibold">' + (p.relationship || '—') + '</div></div>' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Phone 1</label><div class="fw-semibold">' + (p.phone1 || '—') + '</div></div>' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Phone 2</label><div class="fw-semibold">' + (p.phone2 || '—') + '</div></div>' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Occupation</label><div class="fw-semibold">' + (p.occupation || '—') + '</div></div>' +
+                                '<div class="col-sm-6"><label class="form-label text-muted small mb-0">Address</label><div class="fw-semibold">' + (p.address || '—') + '</div></div>' +
+                            '</div>' +
+                            '<hr>' +
+                            '<h6 class="mb-2"><i class="bi bi-people me-1"></i>Linked Wards</h6>' +
+                            childrenHtml
+                        );
+                    } else {
+                        $('#parentDetailBody').html('<div class="alert alert-danger mb-0">' + (r.message || 'Parent not found.') + '</div>');
+                    }
+                },
+                error: function () {
+                    $('#parentDetailBody').html('<div class="alert alert-danger mb-0">An error occurred while loading details.</div>');
+                }
+            });
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Delete Parent/Guardian?',
+                text: 'This will also remove all links to students. This cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent4)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, delete!'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/V1/DeleteParent',
+                        type: 'POST',
+                        data: JSON.stringify({ Id: id }),
+                        contentType: 'application/json',
+                        headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                        success: function (r) {
+                            if (r.Success) {
+                                Swal.fire('Deleted!', r.Message, 'success');
+                                parentsTable.ajax.reload();
+                            } else {
+                                Swal.fire('Cannot Delete', r.Message, 'error');
+                            }
+                        },
+                        error: function () { Swal.fire('Error', 'An error occurred. Please try again.', 'error'); }
+                    });
+                }
+            });
+        }
+    </script>
+}

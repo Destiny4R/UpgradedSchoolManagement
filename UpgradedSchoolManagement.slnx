@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="UpgradedSchoolManagementDataAccess/UpgradedSchoolManagementDataAccess.csproj" />
+  <Project Path="UpgradedSchoolManagementModels/UpgradedSchoolManagementModels.csproj" />
+  <Project Path="UpgradedSchoolManagementUltitlities/UpgradedSchoolManagementUltitlities.csproj" />
+  <Project Path="UpgradedSchoolManagementWeb/UpgradedSchoolManagementWeb.csproj" />
+</Solution>

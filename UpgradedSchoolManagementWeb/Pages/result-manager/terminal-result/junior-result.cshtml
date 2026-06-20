@@ -1,0 +1,246 @@
+﻿@page "{id:long}"
+@model UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result.junior_resultModel
+@using UpgradedSchoolManagementModels.DTOs
+@{
+    Layout = null;
+    var result = Model.Result;
+    var initial = string.IsNullOrWhiteSpace(result.StudentName) ? "J" : result.StudentName.Substring(0, 1);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSS Terminal Result</title>
+    <link href="~/lib/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body { font-family: Inter, Arial, sans-serif; background: #f4f6f9; color: #1e293b; font-size: 0.88rem; }
+        .result-shell { max-width: 1180px; margin: 0 auto; background: #fff; }
+        .header-wrap { background: #fff; border-top: 5px solid #0f4c75; border-bottom: 3px solid #e8b400; }
+        .school-title { color: #0f4c75; font-size: 1.4rem; font-weight: 700; }
+        .report-title { background: #0f4c75; color: #fff; letter-spacing: 0.12em; font-weight: 700; font-size: 0.8rem; padding: 6px 20px; border-radius: 4px; display: inline-block; }
+        .card-flat { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .label-sm { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; }
+        .val-md { font-size: 0.9rem; font-weight: 600; color: #0f172a; }
+        .tbl-jss thead th { background: #fff; color: #0f4c75; font-size: 0.78rem; font-weight: 600; white-space: nowrap; border: none; }
+        .tbl-jss td { border-color: #f1f5f9; vertical-align: middle; font-size: 0.84rem; }
+        .tbl-jss tfoot td { background: #e8f0fe; font-weight: 700; color: #0f4c75; }
+        .grd { display: inline-block; min-width: 30px; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem; text-align: center; }
+        .g1 { background: #d1fae5; color: #065f46; }
+        .g2 { background: #dbeafe; color: #1e40af; }
+        .g3 { background: #fef3c7; color: #92400e; }
+        .g4 { background: #ffe4e6; color: #9f1239; }
+        .g5 { background: #fee2e2; color: #991b1b; }
+        .rotate-upward { transform: rotate(180deg); writing-mode: vertical-lr; }
+        .sig-area { border-top: 1.5px solid #333; width: 160px; margin-top: 4px; }
+        .remark-strip { border-left: 4px solid; border-radius: 0 6px 6px 0; padding: 8px 14px; font-size: 0.85rem; }
+        .print-actions { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,0.95); border-bottom: 1px solid #e2e8f0; padding: 10px 0; }
+        @@media print { body { background: #fff; } .print-actions { display: none !important; } .result-shell { max-width: 100%; } }
+    </style>
+</head>
+<body>
+    @if (!result.IsAllowed)
+    {
+        <div class="container py-5">
+            <div class="card-flat p-4">
+                <h4 class="text-danger mb-3">Result Access Restricted</h4>
+                <p>@result.AccessMessage</p>
+                <table class="table table-sm">
+                    <thead><tr><th>Compulsory Payment Item</th><th class="text-end">Expected</th><th class="text-end">Paid</th><th class="text-end">Outstanding</th></tr></thead>
+                    <tbody>
+                        @foreach (var item in result.OutstandingPayments)
+                        {
+                            <tr><td>@item.PaymentItemName</td><td class="text-end">₦@item.ExpectedAmount.ToString("0.00")</td><td class="text-end">₦@item.AmountPaid.ToString("0.00")</td><td class="text-end">₦@item.Balance.ToString("0.00")</td></tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><td colspan="3" class="text-end fw-bold">Total Outstanding</td><td class="text-end fw-bold">₦@result.TotalOutstanding.ToString("0.00")</td></tr></tfoot>
+                </table>
+                <p class="text-danger fw-bold">Please complete the compulsory payment before viewing or printing this result.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="print-actions no-print"><div class="container"><button class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print Result</button></div></div>
+
+        <div class="container py-3" style="max-width: 100%;">
+            <div class="result-shell">
+                <div class="header-wrap p-3 mb-4 rounded">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            @if (!string.IsNullOrEmpty(result.SchoolLogoUrl))
+                            {
+                                <img src="@result.SchoolLogoUrl" alt="Logo" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #e8b400;" />
+                            }
+                            else
+                            {
+                                <div style="width:72px;height:72px;background:#0f4c75;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;border:3px solid #e8b400;">J</div>
+                            }
+                        </div>
+                        <div class="col text-center">
+                            <div class="school-title" style="font-size:1.1rem;color:#0f4c75;">@result.SchoolName</div>
+                            <div class="school-title">JUNIOR SECONDARY SCHOOL</div>
+                            <p class="mb-1 text-muted" style="font-size:0.8rem;">Academic Session @result.Session &mdash; @result.Term</p>
+                            <span class="report-title">JUNIOR SECONDARY SCHOOL TERMINAL RESULT SHEET</span>
+                        </div>
+                        <div class="col-auto">
+                            @if (!string.IsNullOrEmpty(result.PicturePath))
+                            {
+                                <img src="@result.PicturePath" alt="Student" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #e8b400;" />
+                            }
+                            else
+                            {
+                                <div style="width:72px;height:72px;background:#0f4c75;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;border:3px solid #e8b400;">@initial</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-flat p-2 mb-2">
+                    <div class="row g-2 align-items-start">
+                        <div class="col-sm-4"><div class="label-sm">Student's Full Name</div><div class="val-md text-uppercase">@result.StudentName</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Adm. Number</div><div class="val-md">@result.AdmissionNumber</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Class</div><div class="val-md">@result.ClassName</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Date of Birth</div><div class="val-md">@result.DateOfBirth</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Gender</div><div class="val-md">@result.Gender</div></div>
+                    </div>
+                    <hr class="my-2" />
+                    <div class="row g-2">
+                        <div class="col-sm-2"><div class="label-sm">Days Present</div><div class="val-md">@result.DaysPresent / @result.Attendance</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Days Absent</div><div class="val-md">@result.DaysAbsent</div></div>
+                        <div class="col-sm-2"><div class="label-sm">No. in Class</div><div class="val-md">@result.ClassSize</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Class Position</div><div class="val-md">@result.ClassPosition</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Academic Average</div><div class="val-md">@result.AcademicAverage.ToString("0.##")%</div></div>
+                        <div class="col-sm-2"><div class="label-sm">Overall Remark</div><div class="val-md text-success">@result.OverallRemark</div></div>
+                    </div>
+                </div>
+
+                <div class="card-flat mb-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="label-sm p-3 pb-0 mb-1">Academic Performance</div>
+                            <div class="card-flat">
+                                <table class="table table-bordered table-sm tbl-jss mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:22%">Subject</th>
+                                            @{ var headerAssessments = result.AcademicRows.FirstOrDefault()?.Assessments ?? new List<ResultTableAssessmentDto>(); }
+                                            @foreach (var assessment in headerAssessments)
+                                            {
+                                                <th class="text-center rotate-upward">@assessment.AssessmentName (@assessment.AssessmentScore.ToString("0.#"))</th>
+                                            }
+                                            <th class="text-center rotate-upward">Total</th>
+                                            <th class="text-center rotate-upward">Lowest in Class</th>
+                                            <th class="text-center rotate-upward">Highest in Class</th>
+                                            <th class="text-center rotate-upward">Grade</th>
+                                            <th class="text-center rotate-upward">Position in Subject</th>
+                                            <th class="rotate-upward text-center">Remark</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody> 
+                                        @foreach (var row in result.AcademicRows)
+                                        {
+                                            <tr>
+                                                <td>@row.SubjectName</td>
+                                                @foreach (var assessment in row.Assessments)
+                                                {
+                                                    <td class="text-center">@(assessment.StudentScore.HasValue ? assessment.StudentScore.Value.ToString("0.#") : string.Empty)</td>
+                                                }
+                                                <td class="text-center fw-700">@row.TotalScore.ToString("0.#")</td>
+                                                <td class="text-center">@row.LowestScore.ToString("0.#")</td>
+                                                <td class="text-center">@row.HighestScore.ToString("0.#")</td>
+                                                <td class="text-center"><span class="grd @GetGradeClass(row.Grade)">@row.Grade</span></td>
+                                                <td class="text-center fw-600">@row.SubjectPosition</td>
+                                                <td class="text-success fw-600">@row.Remark</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="@Math.Max(4, headerAssessments.Count + 2)"><strong>Cumulative Total / Average</strong></td>
+                                            <td colspan="2" class="text-center fs-5">@result.AcademicTotal.ToString("0.#") <small class="fs-6">(@result.AcademicAverage.ToString("0.##")%)</small></td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card-flat p-3 mt-5">
+                                <div class="label-sm mb-2">Psychomotor Skills</div>
+                                @if (!result.PsychomotorSkills.Any()) { <p class="text-muted small mb-0">No psychomotor skills assigned.</p> }
+                                else { foreach (var skill in result.PsychomotorSkills) { <div class="d-flex justify-content-between small"><span>@skill.SkillName</span><span class="grd @GetScoreClass(skill.Score)">@skill.Score - @skill.ScoreLabel</span></div> } }
+                            </div>
+                            <div class="card-flat p-3 mt-2">
+                                <div class="label-sm mb-2">Affective Domain</div>
+                                @if (!result.AffectiveSkills.Any()) { <p class="text-muted small mb-0">No affective skills assigned.</p> }
+                                else { foreach (var skill in result.AffectiveSkills) { <div class="d-flex justify-content-between small"><span>@skill.SkillName</span><span class="grd @GetScoreClass(skill.Score)">@skill.Score - @skill.ScoreLabel</span></div> } }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-flat p-3 mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="label-sm mb-1">Form Teacher's Remark</div>
+                            <div class="remark-strip" style="background:#f0fdf4;border-color:#22c55e;">@result.ClassTeacherRemark</div>
+                            <div class="mt-3"><div style="font-style:italic;font-size:1.1rem;color:#0f4c75;">@result.ClassTeacherName</div><div class="sig-area"></div><div style="font-size:0.72rem;color:#888;">Form Teacher &mdash; @result.ClassName</div></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="label-sm mb-1">Principal's Remark</div>
+                            <div class="remark-strip" style="background:#eff6ff;border-color:#3b82f6;">@result.PrincipalRemark</div>
+                            <div class="mt-3"><div style="font-style:italic;font-size:1.1rem;color:#0f4c75;">@result.PrincipalName</div><div class="sig-area"></div><div style="font-size:0.72rem;color:#888;">Principal</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-2">
+                    <div class="card-body">
+                        <div><strong>KEY TO GRADING</strong>&nbsp; A - Distinction(75 and above), B - Very Good(65 - 74), C - Good(55 - 64), D - Fair(40 - 54), E - Poor(39 and below)</div>
+                        <div><strong>Psychomotor/Affective GRADING</strong>&nbsp; 5 - Excellent, 4 - Very Good, 3 - Good, 2 - Fail, 1 - Poor</div>
+                    </div>
+                </div>
+
+                <div class="card-flat p-3 mt-2">
+                    <div class="row g-2 text-center">
+                        <div class="col-sm-3"><div class="label-sm">Next Term Begins</div><div class="val-md">@result.NextTermStart</div></div>
+                        <div class="col-sm-3"><div class="label-sm">School Fees</div><div class="val-md">₦@result.NextTermFees</div></div>
+                        <div class="col-sm-3"><div class="label-sm">Promoted To</div><div class="val-md text-success">@result.NextClass</div></div>
+                        <div class="col-sm-3"><div class="label-sm">Parent's Signature</div><div style="border-bottom:1.5px solid #999;height:28px;margin-top:4px;"></div></div>
+                    </div>
+                </div>
+
+                <p class="text-center text-muted mt-1" style="font-size:0.7rem;">This report is computer-generated and authentic without a separate stamp.</p>
+            </div>
+        </div>
+    }
+</body>
+</html>
+
+@functions {
+    string GetGradeClass(string grade)
+    {
+        return grade switch
+        {
+            "A" or "Distinction" => "g1",
+            "B" or "Very Good" => "g2",
+            "C" or "Good" => "g3",
+            "D" or "Fair" => "g4",
+            _ => "g5"
+        };
+    }
+
+    string GetScoreClass(byte score)
+    {
+        return score switch
+        {
+            5 => "g1",
+            4 => "g2",
+            3 => "g3",
+            2 => "g4",
+            _ => "g5"
+        };
+    }
+}

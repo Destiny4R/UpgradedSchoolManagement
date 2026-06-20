@@ -1,0 +1,105 @@
+﻿@page
+@model UpgradedSchoolManagementWeb.Pages.student.payment_historyModel
+@{
+    ViewData["Title"] = "Payment History";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-credit-card-2-front me-2" style="color:var(--accent)"></i>Payment History</div>
+            <div class="mgmt-sub">View all your fee payments across terms</div>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>My Payments</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="paymentsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Session</th>
+                            <th>Term</th>
+                            <th>Items</th>
+                            <th>Amount (₦)</th>
+                            <th>Status</th>
+                            <th>State</th>
+                            <th>Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        $(document).ready(function () {
+            $('#paymentsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/Home/GetMyPayments',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) { return JSON.stringify(d); }
+                },
+                columns: [
+                    { data: 'reference', width: '140px' },
+                    { data: 'session', width: '100px' },
+                    { data: 'term', width: '90px' },
+                    {
+                        data: 'itemNames', width: '200px',
+                        render: function (d) { return d && d.length ? d.join(', ') : '—'; }
+                    },
+                    {
+                        data: 'totalAmount', width: '100px',
+                        render: function (d) { return '₦' + Number(d).toLocaleString(undefined, { minimumFractionDigits: 2 }); }
+                    },
+                    {
+                        data: 'status', width: '90px', className: 'text-center',
+                        render: function (d) {
+                            var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
+                            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';
+                        }
+                    },
+                    {
+                        data: 'state', width: '90px', className: 'text-center',
+                        render: function (d) {
+                            var map = { Approved: 'success', Pending: 'warning text-dark', Rejected: 'danger', Cancelled: 'secondary' };
+                            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';
+                        }
+                    },
+                    {
+                        data: 'paymentDate', width: '110px',
+                        render: function (d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; }
+                    },
+                    {
+                        data: null, orderable: false, width: '80px',
+                        render: function (data, type, row) {
+                            return `<div class="dropdown text-center">
+                                <button class="btn-action" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" target="_blank" href="/Admin/Finance/Payments/full-receipt/${row.termRegId}"><i class="bi bi-printer me-2"></i>Term Receipt</a></li>
+                                </ul>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[7, 'desc']],
+                language: { emptyTable: 'No payments found.' }
+            });
+        });
+    </script>
+}
