@@ -35,11 +35,11 @@ namespace UpgradedSchoolManagementWeb.Pages.Account
         {
             [Required]
             [StringLength(50)]
-            public string Email { get; set; } = string.Empty;
+            [Display(Name ="Username/Admission Number")]
 
             [Required, StringLength(20)]
             [DataType(DataType.Password)]
-            public string Password { get; set; } = string.Empty;
+            public string Password { get; set; }
 
             [Display(Name = "Remember me")]
             public bool RememberMe { get; set; }
