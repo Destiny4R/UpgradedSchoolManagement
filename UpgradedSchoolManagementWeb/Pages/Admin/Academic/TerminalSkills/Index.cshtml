@@ -7,6 +7,7 @@
 @section Sheets {
     <partial name="_DataTablesSheetFiles" />
     <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+    <link href="~/lib/select2/css/select2.min.css" rel="stylesheet" />
 }
 
 <div class="mgmt-page">
@@ -136,10 +137,9 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Class <span class="text-danger">*</span></label>
-                    <select id="assignClass" class="form-select" asp-items="@Model.SelectionViewModal.SchoolClasses">
-                        <option value="">--- Select Class ---</option>
-                    </select>
+                    <label class="form-label">Classes <span class="text-danger">*</span></label>
+                    <select id="assignClass" class="form-select" multiple asp-items="@Model.SelectionViewModal.SchoolClasses"></select>
+                    <div class="form-text">Select one or more classes with the same result template. Skills will be assigned to all selected classes.</div>
                 </div>
                 <div id="skillCheckboxes" class="row g-3"></div>
             </div>
@@ -153,6 +153,7 @@
 
 @section Scripts {
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script src="~/lib/select2/js/select2.min.js"></script>
     <partial name="_DataTablesScriptsFiles" />
     <script>
         const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
@@ -329,21 +330,32 @@
             responsive: true
         });
 
+        function initSelect2() {
+            $('#assignClass').select2({
+                dropdownParent: $('#assignModal'),
+                placeholder: '--- Select Classes ---',
+                width: '100%',
+                closeOnSelect: false,
+                allowClear: true
+            });
+        }
+
         $('#btnOpenAssignModal').on('click', async function () {
-            $('#assignClass').val('');
-            $('#skillCheckboxes').html('<div class="text-center text-muted">Select a class to load available skills.</div>');
+            $('#assignClass').val('').trigger('change');
+            $('#skillCheckboxes').html('<div class="text-center text-muted">Select one or more classes to load available skills.</div>');
             const res = await fetch('?handler=ActiveSkills');
             const data = await res.json();
             allActiveSkills = data.success ? data.data : [];
         });
 
         $('#assignClass').on('change', async function () {
-            const classId = parseInt($(this).val());
-            if (!classId) {
-                $('#skillCheckboxes').html('<div class="text-center text-muted">Select a class to load available skills.</div>');
+            const selectedVals = $(this).val();
+            if (!selectedVals || !selectedVals.length) {
+                $('#skillCheckboxes').html('<div class="text-center text-muted">Select one or more classes to load available skills.</div>');
                 return;
             }
 
+            const classId = parseInt(selectedVals[0]);
             $('#skillCheckboxes').html('<div class="text-center text-muted"><i class="bi bi-arrow-repeat"></i> Loading skills...</div>');
             const assignedRes = await fetch(`?handler=SkillsByClass&classId=${classId}`);
             const assignedData = await assignedRes.json();
@@ -373,11 +385,13 @@
         }
 
         $('#btnSaveAssignment').on('click', async function () {
-            const classId = parseInt($('#assignClass').val());
-            if (!classId) {
-                toast('Please select a class.', false);
+            const selectedClasses = $('#assignClass').val();
+            if (!selectedClasses || !selectedClasses.length) {
+                toast('Please select at least one class.', false);
                 return;
             }
+
+            const classIds = selectedClasses.map(function (v) { return parseInt(v); });
 
             const selected = $('.skill-checkbox:checked').map(function () { return parseInt(this.value); }).get();
             if (!selected.length) {
@@ -385,12 +399,14 @@
                 return;
             }
 
-            const data = await postJson('?handler=AssignSkillsToClass', { schoolClassId: classId, resultSkillIds: selected });
+            const data = await postJson('?handler=AssignSkillsToClass', { schoolClassIds: classIds, resultSkillIds: selected });
             toast(data.message, data.success);
             if (data.success) {
                 $('#assignModal').modal('hide');
                 assignedSkillTable.ajax.reload(null, false);
             }
         });
+
+        initSelect2();
     </script>
 }

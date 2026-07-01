@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.DTOs;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager
 {
+    [Authorize(Policy = "Result.Edit")]
     public class edit_resultModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -82,6 +85,16 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager
 
             if (result.Success)
             {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "SAVE",
+                    module: "ResultManagement",
+                    description: $"Results saved for term registration {Id}",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+
                 TempData["Success"]  = result.Message;
                 return RedirectToPage("index");
             }

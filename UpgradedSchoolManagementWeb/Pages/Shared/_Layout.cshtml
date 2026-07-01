@@ -329,7 +329,7 @@
                 @if (await HasPermission("AuditLog.View"))
                 {
                     <div class="nav-item">
-                        <a class="@("nav-item-link" + NavActive("/Admin/AuditLogs"))" asp-page="/Admin/AuditLogs/Index">
+                        <a class="@("nav-item-link" + NavActive("/admin/audit-logs/Index"))" asp-page="/admin/audit-logs/Index">
                             <i class="bi bi-journal-text nav-icon"></i>
                             <span class="nav-link-text">Audit Logs</span>
                         </a>
@@ -476,7 +476,7 @@
                                 }
                                 @if (await HasPermission("AuditLog.View"))
                                 {
-                                    <a class="dd-item" asp-page="/Admin/AuditLogs/Index"><i class="bi bi-journal-text"></i>Audit Logs</a>
+                                <a class="dd-item" asp-page="/admin/audit-logs/Index"><i class="bi bi-journal-text"></i>Audit Logs</a>
                                 }
                             </div>
                             <div class="dd-section">

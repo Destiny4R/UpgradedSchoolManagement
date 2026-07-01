@@ -131,14 +131,26 @@ namespace UpgradedSchoolManagementDataAccess.Services
 
                 if (permissions.Any(p => p.Code == PermissionConstants.Users.View))
                 {
+                    var systemItems = new List<SidebarItem>
+                    {
+                        new SidebarItem { Text = "Users", Icon = "bi-people-fill", Url = "/Admin/Users" },
+                        new SidebarItem { Text = "Roles", Icon = "bi-shield-fill", Url = "/Admin/Roles" }
+                    };
+
+                    if (permissions.Any(p => p.Code == PermissionConstants.AuditLogs.View))
+                    {
+                        systemItems.Add(new SidebarItem
+                        {
+                            Text = "Audit Logs",
+                            Icon = "bi-journal-text",
+                            Url = "/Admin/audit-logs"
+                        });
+                    }
+
                     sidebar.Sections.Add(new SidebarSection
                     {
                         Label = "System",
-                        Items = new List<SidebarItem>
-                        {
-                            new SidebarItem { Text = "Users", Icon = "bi-people-fill", Url = "/Admin/Users" },
-                            new SidebarItem { Text = "Roles", Icon = "bi-shield-fill", Url = "/Admin/Roles" }
-                        }
+                        Items = systemItems
                     });
                 }
 

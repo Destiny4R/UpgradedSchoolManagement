@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
@@ -7,6 +8,7 @@ using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager
 {
+    [Authorize(Policy = "Result.View")]
     public class indexModel : PageModel
     {
         private readonly IUnitOfWork unitOfWork;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -5,6 +6,7 @@ using UpgradedSchoolManagementModels.DTOs;
 
 namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.parent_data
 {
+    [Authorize(Policy = "Student.Edit")]
     public class upsertModel : PageModel
     {
         private readonly IParentGuardianService _parentGuardianService;

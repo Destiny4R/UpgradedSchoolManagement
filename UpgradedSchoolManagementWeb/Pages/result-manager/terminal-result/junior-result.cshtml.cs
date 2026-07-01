@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using UpgradedSchoolManagementDataAccess.Data;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -6,6 +7,7 @@ using static UpgradedSchoolManagementModels.Models.ConstantEnums;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result
 {
+    [Authorize(Policy = "Result.View")]
     public class junior_resultModel : TerminalResultPageBaseModel
     {
         public junior_resultModel(ApplicationDbContext db, IResultSkillService resultSkillService, IOptions<SchoolConfigurationSetup> schoolConfig) : base(db, resultSkillService, schoolConfig)

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -5,6 +6,7 @@ using UpgradedSchoolManagementModels.Models;
 
 namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.students_admission
 {
+    [Authorize(Policy = "Student.Create")]
     public class upsertModel : PageModel
     {
         private readonly IStudentService _studentService;

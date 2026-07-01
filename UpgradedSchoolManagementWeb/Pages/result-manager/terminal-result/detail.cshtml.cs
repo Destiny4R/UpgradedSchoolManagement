@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using static UpgradedSchoolManagementModels.Models.ConstantEnums;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result
 {
+    [Authorize(Policy = "Result.View")]
     public class detailModel : PageModel
     {
         private readonly ApplicationDbContext _db;

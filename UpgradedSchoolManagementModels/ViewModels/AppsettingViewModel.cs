@@ -26,11 +26,13 @@ namespace UpgradedSchoolManagementModels.ViewModels
         [Display(Name = "Principal Signature")]
         [AllowedExtensions(new[] { ".jpg", ".jpeg", ".png" })]
         public IFormFile? PrincipalSignature { get; set; }
+        public string? PrincipalSignatureUrl { get; set; }
         [Display(Name = "Cashier Name")]
         public string? CashierName { get; set; }
         [Display(Name = "Cashier Signature")]
-        [RegularExpression(@"([a-zA-Z0-9\s_\\.\-:])+(.png|.jpg|.jpeg)$", ErrorMessage = "Only image files (.png, .jpg, .jpeg) are allowed.")]
+        [RegularExpression(@"([a-zA-Z0-9\s_\\.\-:])+(.png|.jpg|.jpeg)$", ErrorMessage = "Only image files (.jpg, .jpeg, .png) are allowed.")]
         public IFormFile? CashierSignature { get; set; }
+        public string? CashierSignatureUrl { get; set; }
         [Display(Name = "Examination Access Control")]
         public bool CanPrintResult { get; set; } = false;
 

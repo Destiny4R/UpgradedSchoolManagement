@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.DTOs;
 using UpgradedSchoolManagementModels.Models;
@@ -8,6 +10,7 @@ using static UpgradedSchoolManagementModels.Models.ConstantEnums;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.Academic.TerminalSkills
 {
+    [Authorize(Policy = "Settings.Manage")]
     public class IndexModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -27,12 +30,36 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Academic.TerminalSkills
         public async Task<IActionResult> OnPostSaveSkillAsync([FromBody] CreateResultSkillDto model)
         {
             var result = await _unitOfWork.ResultSkillServices.CreateSkillAsync(model);
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "CREATE",
+                    module: "TerminalSkills",
+                    description: $"Skill '{model.Name}' created",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
             return new JsonResult(new { success = result.Success, message = result.Message, data = result.Data });
         }
 
         public async Task<IActionResult> OnPostUpdateSkillAsync([FromBody] UpdateResultSkillDto model)
         {
             var result = await _unitOfWork.ResultSkillServices.UpdateSkillAsync(model);
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "UPDATE",
+                    module: "TerminalSkills",
+                    description: $"Skill '{model.Name}' updated",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
             return new JsonResult(new { success = result.Success, message = result.Message });
         }
 
@@ -42,19 +69,60 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Academic.TerminalSkills
                 return new JsonResult(new { success = false, message = "Invalid skill ID." });
 
             var result = await _unitOfWork.ResultSkillServices.ToggleSkillStatusAsync(model.Id);
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "TOGGLE",
+                    module: "TerminalSkills",
+                    description: $"Skill ID {model.Id} toggled",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
             return new JsonResult(new { success = result.Success, message = result.Message });
         }
 
         public async Task<IActionResult> OnPostAssignSkillsToClassAsync([FromBody] AssignSkillsToClassDto model)
         {
-            if (model == null)
-                return new JsonResult(new { success = false, message = "Invalid request." });
+            if (model == null || model.SchoolClassIds == null || model.SchoolClassIds.Count == 0)
+                return new JsonResult(new { success = false, message = "Invalid request. Select at least one class." });
 
-            var result = await _unitOfWork.ResultSkillServices.AssignSkillsToClassAsync(
-                model.SchoolClassId,
-                model.ResultSkillIds);
+            var allSucceeded = true;
+            var messages = new List<string>();
 
-            return new JsonResult(new { success = result.Success, message = result.Message });
+            foreach (var classId in model.SchoolClassIds)
+            {
+                var result = await _unitOfWork.ResultSkillServices.AssignSkillsToClassAsync(
+                    classId,
+                    model.ResultSkillIds);
+
+                if (!result.Success)
+                {
+                    allSucceeded = false;
+                    messages.Add(result.Message);
+                }
+            }
+
+            if (allSucceeded)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "ASSIGN",
+                    module: "TerminalSkills",
+                    description: $"Skills assigned to {model.SchoolClassIds.Count} class(es) (IDs: {string.Join(",", model.SchoolClassIds)})",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
+
+            var message = allSucceeded
+                ? "Skills assigned successfully to all selected classes."
+                : $"Some assignments failed: {string.Join("; ", messages)}";
+
+            return new JsonResult(new { success = allSucceeded, message });
         }
 
         public async Task<IActionResult> OnPostSkillsDataTableAsync([FromBody] DataTablesRequest request)

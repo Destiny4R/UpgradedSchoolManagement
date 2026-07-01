@@ -1,0 +1,127 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.audit_logs.IndexModel
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+}
+
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-journal-text me-2" style="color:var(--accent)"></i>Audit Logs</div>
+            <div class="mgmt-sub">Track all system activities, logins, and important operations</div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(TempData["Success"]?.ToString()))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success!</strong> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(TempData["Error"]?.ToString()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            <strong>Error!</strong> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head">
+            <h6><i class="bi bi-list-ul me-2" style="color:var(--accent2)"></i>Activity Log</h6>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="auditLogsTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Date/Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Module</th>
+                            <th>Description</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script>
+        $(document).ready(function () {
+            $('#auditLogsTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ordering: true,
+                order: [[1, 'desc']],
+                ajax: {
+                    type: 'POST',
+                    url: '?handler=DataTable',
+                    contentType: 'application/json',
+                    data: function (d) {
+                        return JSON.stringify(d);
+                    }
+                },
+                columns: [
+                    {
+                        data: null,
+                        render: function (data, type, row, meta) {
+                            return meta.row + 1 + meta.settings._iDisplayStart;
+                        }
+                    },
+                    {
+                        data: 'createdDate',
+                        render: function (data) {
+                            if (!data) return '';
+                            var d = new Date(data);
+                            var pad = function (n) { return n < 10 ? '0' + n : n; };
+                            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+                                ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                        }
+                    },
+                    { data: 'userName' },
+                    {
+                        data: 'action',
+                        render: function (data) {
+                            var badges = {
+                                'LOGIN_SUCCESS': 'bg-success',
+                                'LOGIN_FAILED': 'bg-danger',
+                                'LOGIN_LOCKED': 'bg-warning text-dark',
+                                'LOGOUT': 'bg-secondary',
+                                'CREATE': 'bg-primary',
+                                'UPDATE': 'bg-info text-dark',
+                                'DELETE': 'bg-danger',
+                                'SAVE': 'bg-primary',
+                                'ASSIGN': 'bg-purple'
+                            };
+                            var cls = badges[data] || 'bg-secondary';
+                            return '<span class="badge ' + cls + '">' + (data || '') + '</span>';
+                        }
+                    },
+                    { data: 'module' },
+                    { data: 'description' },
+                    { data: 'ipAddress' }
+                ],
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                pageLength: 25,
+                language: {
+                    search: "Filter:",
+                    emptyTable: "No audit logs found."
+                }
+            });
+        });
+    </script>
+}

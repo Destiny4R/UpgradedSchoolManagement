@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -7,6 +8,7 @@ using static UpgradedSchoolManagementModels.PermissionConstants;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments
 {
+    [Authorize(Policy = "Finance.PaymentRecord")]
     public class MakeModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;

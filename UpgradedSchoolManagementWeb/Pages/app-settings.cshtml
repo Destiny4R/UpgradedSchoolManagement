@@ -34,7 +34,7 @@
     </div>
     <div class="mgmt-card">
         <div class="mgmt-card-body">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 <div class="row g-3 needs-validation">
                     <div class="col-md-6">
                         <label asp-for="@Model.appsettingView.Term" class="form-label"></label>
@@ -90,6 +90,12 @@
                                 <label asp-for="@Model.appsettingView.PrincipalSignature" class="form-label"></label>
                                 <input asp-for="@Model.appsettingView.PrincipalSignature" accept="image/png, image/jpeg" class="form-control" />
                             </div>
+                            @if (!string.IsNullOrEmpty(Model.appsettingView.PrincipalSignatureUrl))
+                            {
+                                <div class="col-md-4">
+                                    <img src="@Model.appsettingView.PrincipalSignatureUrl" alt="Principal Signature" style="max-height:80px;border:1px solid #ddd;border-radius:4px;padding:2px;" />
+                                </div>
+                            }
                         </div>
                     </fieldset>
 
@@ -104,6 +110,12 @@
                                 <label asp-for="@Model.appsettingView.CashierSignature" class="form-label"></label>
                                 <input asp-for="@Model.appsettingView.CashierSignature" accept="image/png, image/jpeg" class="form-control" />
                             </div>
+                            @if (!string.IsNullOrEmpty(Model.appsettingView.CashierSignatureUrl))
+                            {
+                                <div class="col-md-4">
+                                    <img src="@Model.appsettingView.CashierSignatureUrl" alt="Cashier Signature" style="max-height:80px;border:1px solid #ddd;border-radius:4px;padding:2px;" />
+                                </div>
+                            }
                         </div>
                     </fieldset>
                 }

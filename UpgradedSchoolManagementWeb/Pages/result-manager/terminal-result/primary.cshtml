@@ -1,10 +1,17 @@
 ﻿@page "{id:long}"
 @model UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result.primaryModel
 @using UpgradedSchoolManagementModels.DTOs
+@inject ApplicationDbContext _db
 @{
     Layout = null;
     var result = Model.Result;
     var initial = string.IsNullOrWhiteSpace(result.StudentName) ? "P" : result.StudentName.Substring(0, 1);
+    var adminUser = _db.Appsettings.Where(a => a.IsAdmin).OrderByDescending(a => a.UpdatedDate).FirstOrDefault();
+    string PrincipalSignaturePath = string.Empty;
+    if(adminUser != null)
+    {
+        PrincipalSignaturePath = adminUser.PrincipalSignature ?? string.Empty;
+    }
 }
 
 <!DOCTYPE html>
@@ -83,7 +90,7 @@
                         <div class="col-2 d-flex justify-content-center">
                             @if (!string.IsNullOrEmpty(result.SchoolLogoUrl))
                             {
-                                <img src="@result.SchoolLogoUrl" alt="Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #1a5276;" />
+                                <img src="@result.SchoolLogoUrl" alt="Logo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #1a5276;" />
                             }
                         </div>
                         <div class="col-8">
@@ -95,7 +102,7 @@
                         <div class="col-2 d-flex justify-content-center">
                             @if (!string.IsNullOrEmpty(result.PicturePath))
                             {
-                                <img src="@result.PicturePath" alt="Student" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #f6d365;" />
+                                <img src="@result.PicturePath" alt="Student" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #f6d365;" />
                             }
                             else
                             {
@@ -202,9 +209,16 @@
                         <div class="col-md-6">
                             <div class="section-head mb-1">Principal's Remark</div>
                             <p class="mb-2" style="font-size:0.87rem;background:#eff6ff;padding:10px 14px;border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;">@result.PrincipalRemark</p>
-                            <div class="sig-name mb-1">@result.PrincipalName</div>
-                            <div class="sig-line"></div>
-                            <div style="font-size:0.75rem;color:#666;">Principal</div>
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="sig-name mb-1">@result.PrincipalName</div>
+                                    <div class="sig-line"></div>
+                                    <div style="font-size:0.75rem;color:#666;">Principal</div>
+                                </div>
+                                <div class="col-4">
+                                    <img src="@(PrincipalSignaturePath)" width="90px" height="60px" alt="Principal Signature" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -214,6 +228,14 @@
                         <div class="col-sm-4"><div class="info-label">Next Term Begins</div><div class="info-value">@result.NextTermStart</div></div>
                         <div class="col-sm-4"><div class="info-label">School Fees</div><div class="info-value">₦@result.NextTermFees</div></div>
                         <div class="col-sm-4"><div class="info-label">Parent's Signature</div><div style="border-bottom:1.5px solid #999;height:28px;margin-top:4px;"></div></div>
+                    </div>
+                </div>
+
+                <div class="">
+                    <div class="desieze3"><text>KEY TO GRADING</text>&nbsp; Final Assessment(A - Distinction; B - Very Good; C - Good; D - Fair; E - Poor;)</div>
+                    <div class="d-flex justify-content-between">
+                        <div class="desieze3">75 and above = A; 65 - 74 = B; 55 - 64 = C; 40 - 54 = D; 39 and below = E;</div>
+                        <div class="h6"><text style="font:italic;">By: D-Best Return Tech - </text><a class="text-decoration-none" href="tel:08039410863">08039410863</a></div>
                     </div>
                 </div>
 

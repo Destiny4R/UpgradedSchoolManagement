@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Setup
 {
+    [Authorize(Policy = "Finance.InvoiceCreate")]
     public class UpsertModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -69,6 +72,16 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Setup
             var result = await _unitOfWork.PaymentSetupService.CreateBatchPaymentSetupAsync(Input);
             if (result.Success)
             {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "CREATE",
+                    module: "PaymentSetup",
+                    description: $"Payment setup created for item {Input.PaymentItemId}, Session {Input.SessionId}, Term {Input.Term}",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+
                 TempData["Success"] = result.Message;
                 return RedirectToPage("Index");
             }
@@ -89,6 +102,16 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Setup
             var result = await _unitOfWork.PaymentSetupService.UpdatePaymentSetupAsync(Input);
             if (result.Success)
             {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "UPDATE",
+                    module: "PaymentSetup",
+                    description: $"Payment setup {Input.Id} updated",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+
                 TempData["Success"] = result.Message;
                 return RedirectToPage("Index");
             }

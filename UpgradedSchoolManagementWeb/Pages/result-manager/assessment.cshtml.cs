@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -8,6 +9,7 @@ using static UpgradedSchoolManagementModels.Models.ConstantEnums;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager
 {
+    [Authorize(Policy = "Result.Edit")]
     public class assessmentModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;

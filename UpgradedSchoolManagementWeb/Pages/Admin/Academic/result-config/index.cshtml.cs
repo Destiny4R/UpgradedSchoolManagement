@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.Models;
 using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config
 {
+    [Authorize(Policy = "Settings.Manage")]
     public class indexModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -49,6 +52,19 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config
             var result = await _unitOfWork.ClassService.SaveAssessmentConfigs(
                 model.SchoolClassIds,
                 model.Assessments);
+
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "SAVE",
+                    module: "ResultConfig",
+                    description: $"Assessment config saved for class(es): {string.Join(",", model.SchoolClassIds)}",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
 
             return new JsonResult(new
             {
@@ -102,6 +118,18 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config
                 return new JsonResult(new { success = false, message = "Invalid ID." });
 
             var result = await _unitOfWork.ClassService.DeleteAssessmentConfig(req.Id);
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "DELETE",
+                    module: "ResultConfig",
+                    description: $"Assessment config {req.Id} deleted",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
             return new JsonResult(new { success = result.Success, message = result.Message });
         }
 
@@ -115,6 +143,18 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config
                 return new JsonResult(new { success = false, message = "Invalid class ID." });
 
             var result = await _unitOfWork.ClassService.DeleteAllAssessmentConfigsByClassId(req.Id);
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "DELETE",
+                    module: "ResultConfig",
+                    description: $"All assessment configs deleted for class {req.Id}",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
             return new JsonResult(new { success = result.Success, message = result.Message });
         }
 
@@ -138,6 +178,19 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.Academic.result_config
                 return new JsonResult(new { success = false, message = "Display order must be greater than 0." });
 
             var result = await _unitOfWork.ClassService.UpdateSingleAssessmentConfig(req.Id, req.Name, req.Score, req.DisplayOrder);
+
+            if (result.Success)
+            {
+                await _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "UPDATE",
+                    module: "ResultConfig",
+                    description: $"Assessment config {req.Id} updated: {req.Name} (Max: {req.Score})",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                );
+            }
 
             return new JsonResult(new { success = result.Success, message = result.Message });
         }

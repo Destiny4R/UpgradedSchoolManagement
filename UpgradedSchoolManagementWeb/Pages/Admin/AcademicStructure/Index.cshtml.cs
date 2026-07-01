@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.AcademicStructure
 {
+    [Authorize(Policy = "AcademicStructure.View")]
     public class IndexModel : PageModel
     {
         private readonly ISessionService _sessionService;

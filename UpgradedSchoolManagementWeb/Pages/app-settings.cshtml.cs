@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
@@ -9,6 +10,7 @@ using UpgradedSchoolManagementUltitlities;
 
 namespace UpgradedSchoolManagementWeb.Pages
 {
+    [Authorize(Policy = "Settings.View")]
     public class app_settingsModel : PageModel
     {
         private readonly ILogger<app_settingsModel> _logger;
@@ -48,7 +50,9 @@ namespace UpgradedSchoolManagementWeb.Pages
                     appsettingView.SubClassId = settings.SubClassId ?? 0;
                     appsettingView.SessionId = settings.SessionId ?? 0;
                     appsettingView.PrincipalName = settings.PrincipalName ?? "";
+                    appsettingView.PrincipalSignatureUrl = settings.PrincipalSignature;
                     appsettingView.CashierName = settings.CashierName ?? "";
+                    appsettingView.CashierSignatureUrl = settings.CashierSignature;
                     appsettingView.CanPrintResult = settings.CanPrintResult;
                     
                     isAdmin = settings.IsAdmin;
@@ -93,6 +97,16 @@ namespace UpgradedSchoolManagementWeb.Pages
             }
 
             await _unitOfWork.AppSettingsServices.UpsertAppSettingsAsync(settings);
+
+            await _unitOfWork.AuditLogService.LogAsync(
+                userId: userId,
+                userName: User.Identity?.Name ?? "Unknown",
+                action: existing == null ? "CREATE" : "UPDATE",
+                module: "AppSettings",
+                description: $"App settings {(existing == null ? "created" : "updated")} for user {userId}",
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers["User-Agent"].ToString()
+            );
 
             TempData["Success"] = "App settings saved successfully.";
             return RedirectToPage();

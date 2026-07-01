@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.Data;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.DTOs;
@@ -46,6 +47,16 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result
 
             if (termReg.SchoolClasses.Resulttype != ResultType)
                 return RedirectToPage("detail", new { id = Id });
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var student = await _db.StudentsTables
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.ApplicationUserId == userId);
+                if (student != null && termReg.StudentId != student.Id)
+                    return Content("You are not authorized to view this result.", "text/plain");
+            }
 
             var access = await ValidateResultAccessAsync(termReg);
             if (!access.Success)
@@ -123,7 +134,7 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager.terminal_result
                 return AccessValidationResult.Allow();
 
             var total = outstanding.Sum(x => x.Balance);
-            var itemLines = string.Join("; ", outstanding.Select(x => $"{x.PaymentItemName}: ₦{x.Balance:0.00} outstanding"));
+            var itemLines = string.Join("; ", outstanding.Select(x => $"{x.PaymentItemName}: {SD.ToNaira(x.Balance)} outstanding"));
             var message = $"Result access is restricted because compulsory payment items are outstanding: {itemLines}. Total outstanding: ₦{total:0.00}. Please complete payment before viewing or printing this result.";
 
             return AccessValidationResult.Deny(message, outstanding, total);

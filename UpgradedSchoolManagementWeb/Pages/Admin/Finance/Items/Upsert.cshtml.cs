@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -5,6 +6,7 @@ using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Items
 {
+    [Authorize(Policy = "Finance.InvoiceCreate")]
     public class UpsertModel : PageModel
     {
         private readonly IPaymentItemService _itemService;

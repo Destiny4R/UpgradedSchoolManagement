@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.Models;
 
 namespace UpgradedSchoolManagementWeb.Pages.Admin.employee_data.employees
 {
+    [Authorize(Policy = "Teacher.Edit")]
     public class upsertModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -80,6 +83,16 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.employee_data.employees
                 var result = await _unitOfWork.EmployeeServices.UpdateEmployee(input);
                 if (result.Success)
                 {
+                    await _unitOfWork.AuditLogService.LogAsync(
+                        userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                        userName: User.Identity?.Name ?? "Unknown",
+                        action: "UPDATE",
+                        module: "Employee",
+                        description: $"Employee '{FullName}' updated",
+                        ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        userAgent: Request.Headers["User-Agent"].ToString()
+                    );
+
                     TempData["Success"] = result.Message;
                     return RedirectToPage("index");
                 }
@@ -105,6 +118,16 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.employee_data.employees
                 var result = await _unitOfWork.EmployeeServices.CreateEmployee(input);
                 if (result.Success)
                 {
+                    await _unitOfWork.AuditLogService.LogAsync(
+                        userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                        userName: User.Identity?.Name ?? "Unknown",
+                        action: "CREATE",
+                        module: "Employee",
+                        description: $"Employee '{FullName}' created",
+                        ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        userAgent: Request.Headers["User-Agent"].ToString()
+                    );
+
                     TempData["Success"] = result.Message;
                     return RedirectToPage("index");
                 }

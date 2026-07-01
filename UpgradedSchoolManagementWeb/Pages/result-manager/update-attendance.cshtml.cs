@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager
 {
+    [Authorize(Policy = "Attendance.Take")]
     public class update_attendanceModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -71,6 +73,16 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager
             var updateResult = _unitOfWork.TermRegistrationServices.UpdateStudentAttendanceAsync(attendances, resultModel).Result;
             if (updateResult.Success)
             {
+                _unitOfWork.AuditLogService.LogAsync(
+                    userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                    userName: User.Identity?.Name ?? "Unknown",
+                    action: "UPDATE",
+                    module: "Attendance",
+                    description: $"Attendance updated for {attendances.Count} student(s)",
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers["User-Agent"].ToString()
+                ).Wait();
+
                 TempData["Success"] = updateResult.Message;
             }
             else

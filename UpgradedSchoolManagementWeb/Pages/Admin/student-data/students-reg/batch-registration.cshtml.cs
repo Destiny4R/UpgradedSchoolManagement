@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UpgradedSchoolManagementDataAccess.IServices;
@@ -5,6 +6,7 @@ using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg
 {
+    [Authorize(Policy = "Student.Import")]
     public class batch_registrationModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;

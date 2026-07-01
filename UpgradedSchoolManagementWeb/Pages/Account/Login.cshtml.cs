@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,6 +8,7 @@ using UpgradedSchoolManagementModels.Models;
 
 namespace UpgradedSchoolManagementWeb.Pages.Account
 {
+    [AllowAnonymous]
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -36,6 +38,7 @@ namespace UpgradedSchoolManagementWeb.Pages.Account
             [Required]
             [StringLength(50)]
             [Display(Name ="Username/Admission Number")]
+            public string Email { get; set; }
 
             [Required, StringLength(20)]
             [DataType(DataType.Password)]

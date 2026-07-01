@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementDataAccess.Services;
+using UpgradedSchoolManagementModels.Models;
 using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg
 {
+    [Authorize(Policy = "Student.Edit")]
     public class upsertModel : PageModel
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -78,16 +81,15 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg
                 var result = _unitOfWork.TermRegistrationServices.UpdateStudentTermRegistrationAsync(termReg).Result;
                 if (result.Success)
                 {
-                    //    await _unitOfWork.LogService.LogUserActionAsync(
-                    //        userId: User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-                    //        userName: User.Identity?.Name,
-                    //        action: "Update",
-                    //        entityType: "TermRegistration",
-                    //        entityId: termReg.Id.ToString(),
-                    //        message: $"Term registration updated for student ID {termReg.StudentId}",
-                    //        ipAddress: GetClientIpAddress(),
-                    //        details: $"Class: {termReg.SchoolClassId}, Term: {termReg.Term}"
-                    //    );
+                    await _unitOfWork.AuditLogService.LogAsync(
+                        userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                        userName: User.Identity?.Name ?? "Unknown",
+                        action: "UPDATE",
+                        module: "StudentRegistration",
+                        description: $"Term registration updated for student {termReg.StudentName} ({termReg.StudentRegNumber})",
+                        ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        userAgent: Request.Headers["User-Agent"].ToString()
+                    );
 
                     TempData["Success"] = result.Message;
                     return RedirectToPage("index");
@@ -100,16 +102,15 @@ namespace UpgradedSchoolManagementWeb.Pages.admin.student_data.students_reg
                 var result = _unitOfWork.TermRegistrationServices.CreateStudentTermRegistrationAsync(termReg).Result;
                 if (result.Success)
                 {
-                    //    await _unitOfWork.LogService.LogUserActionAsync(
-                    //        userId: User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-                    //        userName: User.Identity?.Name,
-                    //        action: "Create",
-                    //        entityType: "TermRegistration",
-                    //        entityId: result.Data.ToString(),
-                    //        message: $"Term registration created for student ID {termReg.StudentRegNumber}: {DateTime.UtcNow}",
-                    //        ipAddress: GetClientIpAddress(),
-                    //        details: $"Class: {termReg.SchoolClassId}, Session: {termReg.SessionId}, Term: {termReg.Term}"
-                    //    );
+                    await _unitOfWork.AuditLogService.LogAsync(
+                        userId: User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Unknown",
+                        userName: User.Identity?.Name ?? "Unknown",
+                        action: "CREATE",
+                        module: "StudentRegistration",
+                        description: $"Term registration created for student {termReg.StudentName} ({termReg.StudentRegNumber}), Class: {termReg.SchoolClassId}, Session: {termReg.SessionId}, Term: {termReg.Term}",
+                        ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        userAgent: Request.Headers["User-Agent"].ToString()
+                    );
                     TempData["Success"] = result.Message;
                     return RedirectToPage("index");
                 }

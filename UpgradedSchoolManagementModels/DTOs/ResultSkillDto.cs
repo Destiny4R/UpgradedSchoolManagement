@@ -34,7 +34,7 @@ namespace UpgradedSchoolManagementModels.DTOs
 
     public class AssignSkillsToClassDto
     {
-        public int SchoolClassId { get; set; }
+        public List<int> SchoolClassIds { get; set; } = new();
         public List<int> ResultSkillIds { get; set; } = new();
     }
 

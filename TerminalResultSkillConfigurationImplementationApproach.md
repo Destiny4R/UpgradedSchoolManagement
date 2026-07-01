@@ -62,7 +62,8 @@ The current result system can configure academic assessments per class, but Psyc
 - Terminal result pages are static Razor pages for Nursery, Primary, Junior, and Senior.
   - File: `UpgradedSchoolManagementWeb/Pages/result-manager/terminal-result/nursery.cshtml:1`
   - File: `UpgradedSchoolManagementWeb/Pages/result-manager/terminal-result/primary.cshtml:1`
-  - File: `UpgradedSchoolManagementWeb/Pages/result-manager/terminal-result/junior-result.cshtml:1`
+  - File: `
+  junior-result.cshtml:1`
   - File: `UpgradedSchoolManagementWeb/Pages/result-manager/terminal-result/senior-result.cshtml:1`
 - These pages currently hard-code Psychomotor/Affective rows.
   - Example: `primary.cshtml:273`
