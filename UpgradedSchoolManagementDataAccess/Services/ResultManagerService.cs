@@ -41,7 +41,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     regnumber = k.StudentsTable != null ? k.StudentsTable.AdmissionNumber : string.Empty,
                     term = k.Term.ToString(),
                     session = k.SesseionTable != null ? k.SesseionTable.Name : string.Empty,
-                    schoolclass = k.SchoolClasses != null ? k.SchoolClasses.Name : string.Empty,
+                    schoolclass = $"{k.SchoolClasses.Name} - {k.SubClassTable.Name}",
                     subjects = $"{k.ResultTable.Count(r => r.Status)}/{k.ResultTable.Count()}",
                     resultStatus = k.ResultTable.Any() && k.ResultTable.All(r => r.Status),
                     attendance = k.Attendance != null && k.Attendance > 0,

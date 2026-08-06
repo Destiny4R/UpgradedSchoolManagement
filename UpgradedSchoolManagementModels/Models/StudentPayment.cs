@@ -26,6 +26,23 @@ namespace UpgradedSchoolManagementModels.Models
         public PaymentStatus Status { get; set; } = PaymentStatus.Completed;
 
         public PaymentState State { get; set; }  = PaymentState.Pending;
+
+        /// <summary>Where the payment was collected: manual cash/bank or online via Paystack.</summary>
+        public PaymentSource PaymentSource { get; set; } = PaymentSource.Manual;
+
+        /// <summary>Online verification lifecycle: Pending -> Successful/Failed -> Verified.</summary>
+        public PaymentVerificationStatus VerificationStatus { get; set; } = PaymentVerificationStatus.Pending;
+
+        /// <summary>Paystack transaction reference (also stored in Reference for online payments).</summary>
+        [StringLength(120)]
+        public string? PaystackReference { get; set; }
+
+        /// <summary>UserName of the staff member who verified an online payment.</summary>
+        [StringLength(256)]
+        public string? VerifiedBy { get; set; }
+
+        public DateTime? VerifiedAt { get; set; }
+
         [StringLength(120)]
         public string? Narration { get; set; }
 

@@ -1,10 +1,4 @@
-﻿@using Microsoft.Extensions.Options
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
-@using System.Security.Claims
-@using UpgradedSchoolManagementDataAccess.Data
-@inject IOptions<SchoolConfigurationSetup> SchoolConfig
-@inject IAuthorizationService AuthorizationService
+﻿@inject IAuthorizationService AuthorizationService
 @inject ApplicationDbContext DbContext
 @{
     var _userName = User.Identity?.Name ?? "User";
@@ -79,6 +73,8 @@
 
         <nav class="sidebar-nav" id="sidebarNav">
 
+            @if (!User.IsInRole("Student"))
+            {
             <!-- ── OVERVIEW ── -->
             <div class="nav-section-label">Overview</div>
             <div class="nav-item">
@@ -87,6 +83,7 @@
                     <span class="nav-link-text">Dashboard</span>
                 </a>
             </div>
+            }
 
             <!-- ── STUDENT PORTAL ── -->
             @if (User.IsInRole("Student"))
@@ -112,6 +109,8 @@
                 </div>
             }
 
+            @if (!User.IsInRole("Student"))
+            {
             <!-- ── PEOPLE (Students) ── -->
             @if (await HasPermission("Student.View"))
             {
@@ -214,19 +213,19 @@
                 <div class="nav-section-label">Attendance</div>
                 <div class="nav-item">
                     <a class="@("nav-item-link" + ChildActive("/student/payment-history"))" asp-page="/student/payment-history">
-                        <i class="bi bi-clipboard2-check-fill nav-icon"></i>
+                        <i class="bi bi-speedometer2 nav-icon"></i>
                         <span class="nav-link-text">Dashboard</span>
                     </a>
                 </div>
                 <div class="nav-item">
                     <a class="@("nav-item-link" + NavActive("/student/profile"))" asp-page="/student/profile">
-                        <i class="bi bi-file-earmark-bar-graph-fill nav-icon"></i>
+                        <i class="bi bi-person nav-icon"></i>
                         <span class="nav-link-text">Profile</span>
                     </a>
                 </div>
                 <div class="nav-item">
-                    <a class="@("nav-item-link" + NavActive("/student.payment_history"))" asp-page="/student/payment_history">
-                        <i class="bi bi-file-earmark-bar-graph-fill nav-icon"></i>
+                    <a class="@("nav-item-link" + NavActive("/student.payment-history"))" asp-page="/student/payment_history">
+                        <i class="bi bi-bank2 nav-icon"></i>
                         <span class="nav-link-text">Payment History</span>
                     </a>
                 </div>
@@ -297,6 +296,12 @@
                     </a>
                 </div>
                 <div class="nav-item">
+                    <a class="@("nav-item-link" + ChildActive("/Admin/Finance/Payments/OnlinePayments"))" asp-page="/Admin/Finance/Payments/OnlinePayments">
+                        <i class="bi bi-globe2 nav-icon"></i>
+                        <span class="nav-link-text">Online Payments</span>
+                    </a>
+                </div>
+                <div class="nav-item">
                     <a class="@("nav-item-link" + NavActive("/Admin/Finance/Reports"))" asp-page="/Admin/Finance/Reports/ClassReport">
                         <i class="bi bi-bar-chart-fill nav-icon"></i>
                         <span class="nav-link-text">Reports</span>
@@ -347,6 +352,8 @@
                         <span class="nav-link-text">General Settings</span>
                     </a>
                 </div>
+            }
+
             }
 
         </nav>
@@ -498,8 +505,7 @@
     </div>
 
     <script src="~/lib/jquery/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script> 
-    @* <script src="https://cdn.jsdelivr.net/npm/moment@2.30.4/moment.min.js"></script> *@
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>

@@ -31,6 +31,14 @@ namespace UpgradedSchoolManagementModels.Models
         public string ApplicationUserId { get; set; }
         public bool IsAdmin { get; set; } = false;
         public bool CanPrintResult { get; set; } = false;
+
+        // Paystack online payment configuration (only meaningful on the admin's settings row)
+        [Column(TypeName = "nvarchar(255)")]
+        public string? PaystackSecretKey { get; set; }
+        [Column(TypeName = "nvarchar(255)")]
+        public string? PaystackPublicKey { get; set; }
+        public bool EnableOnlinePayment { get; set; } = false;
+
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
         //Navigations

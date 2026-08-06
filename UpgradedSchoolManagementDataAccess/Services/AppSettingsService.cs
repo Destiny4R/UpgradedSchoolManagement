@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,6 +48,25 @@ namespace UpgradedSchoolManagementDataAccess.Services
             }
 
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<AppSettings?> GetAdminAppSettingsAsync()
+        {
+            return await _db.Appsettings.FirstOrDefaultAsync(x => x.IsAdmin);
+        }
+
+        public async Task<(bool Enabled, string? SecretKey, string? PublicKey)> GetPaystackSettingsAsync()
+        {
+            var admin = await GetAdminAppSettingsAsync();
+            if (admin == null || !admin.EnableOnlinePayment)
+            {
+                return (false, admin?.PaystackSecretKey, admin?.PaystackPublicKey);
+            }
+
+            var hasKeys = !string.IsNullOrWhiteSpace(admin.PaystackSecretKey) &&
+                          !string.IsNullOrWhiteSpace(admin.PaystackPublicKey);
+
+            return (hasKeys, admin.PaystackSecretKey, admin.PaystackPublicKey);
         }
     }
 }

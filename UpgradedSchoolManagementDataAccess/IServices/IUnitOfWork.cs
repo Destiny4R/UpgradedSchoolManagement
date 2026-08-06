@@ -30,6 +30,7 @@ namespace UpgradedSchoolManagementDataAccess.IServices
         public IResultManagerService ResultManagerServices { get; }
         public IResultSkillService ResultSkillServices { get; }
         public IEmployeeService EmployeeServices { get; }
+        public IPaystackPaymentService PaystackPaymentService { get; }
         
     }
 }

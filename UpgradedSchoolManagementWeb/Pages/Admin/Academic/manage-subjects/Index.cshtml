@@ -4,6 +4,7 @@
     ViewData["Title"] = "Manage Subjects";
 }
 @section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
     <partial name="_DataTablesSheetFiles" />
 }
 <div class="mgmt-page">
@@ -75,6 +76,8 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <partial name="_DataTablesScriptsFiles" />
     <script>
         let subjectsTable;

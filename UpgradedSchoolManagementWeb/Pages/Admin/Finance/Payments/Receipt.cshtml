@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Payment Receipt";
 }
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
 
 <style>
     @@media print {
@@ -167,6 +170,8 @@
                     <div class="col-sm-6"><strong>Status:</strong> <span id="statusDisplay">--</span></div>
                     <div class="col-sm-6"><strong>Payment Date:</strong> <span id="paymentDate">--</span></div>
                     <div class="col-sm-6"><strong>Platform:</strong> <span id="platform">--</span></div>
+                    <div class="col-sm-6"><strong>Source:</strong> <span id="sourceDisplay">--</span></div>
+                    <div class="col-sm-6"><strong>Verification:</strong> <span id="verificationDisplay">--</span></div>
                 </div>
             </div>
 
@@ -185,6 +190,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <script>
         const params = new URLSearchParams(window.location.search);
         const paymentId = params.get('id');
@@ -235,6 +241,8 @@
             var statusMap = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
             var badgeClass = statusMap[d.status] || 'secondary';
             $('#statusDisplay').html('<span class="receipt-status bg-' + badgeClass + '">' + (d.status || '--') + '</span>');
+            $('#sourceDisplay').text(d.paymentSourceLabel || 'Manual');
+            $('#verificationDisplay').text(d.verificationStatusLabel || '--');
 
             if (d.narration) {
                 $('#narrationText').text(d.narration);

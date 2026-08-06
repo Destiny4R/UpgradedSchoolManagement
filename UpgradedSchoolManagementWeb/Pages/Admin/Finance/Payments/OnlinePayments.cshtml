@@ -1,0 +1,235 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments.OnlinePaymentsModel
+@{
+    ViewData["Title"] = "Online Payments";
+}
+@section Sheets {
+    <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
+
+<div class="mgmt-page">
+
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-globe2 me-2" style="color:var(--accent)"></i>Online Payments</div>
+            <div class="mgmt-sub">Track and verify Paystack online fee payments</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a asp-page="Index" class="btn-mgmt-secondary">
+                <i class="bi bi-arrow-left"></i> All Payments
+            </a>
+        </div>
+    </div>
+
+    <div class="mgmt-card fade-in">
+        <div class="mgmt-card-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6><i class="bi bi-table me-2" style="color:var(--accent2)"></i>Paystack Payments</h6>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="form-label mb-0 text-nowrap small">Session:</label>
+                <select id="sessionFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Term:</label>
+                <select id="termFilter" class="form-select form-select-sm" style="width:110px">
+                    <option value="">All</option>
+                    <option value="1">First</option>
+                    <option value="2">Second</option>
+                    <option value="3">Third</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Class:</label>
+                <select id="classFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All</option>
+                </select>
+                <label class="form-label mb-0 text-nowrap small">Verification:</label>
+                <select id="verificationFilter" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All</option>
+                    <option value="1">Pending</option>
+                    <option value="2">Successful</option>
+                    <option value="3">Failed</option>
+                    <option value="4">Verified</option>
+                </select>
+            </div>
+        </div>
+        <div class="mgmt-card-body">
+            <div class="table-responsive">
+                <table id="onlineTable" class="table w-100">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Session</th>
+                            <th>Term</th>
+                            <th class="text-end">Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>State</th>
+                            <th>Verification</th>
+                            <th>Verified By</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_DataTablesScriptsFiles" />
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        let onlineTable;
+        const canApprove = @(Model.CanApprove ? "true" : "false");
+
+        function loadFilters() {
+            $.get('/Home/GetAllClasses', function (data) {
+                var sel = $('#classFilter');
+                if (data && Array.isArray(data)) {
+                    data.forEach(function (c) {
+                        sel.append('<option value="' + c.id + '">' + c.name + '</option>');
+                    });
+                }
+            });
+
+            $.ajax({
+                url: '/Home/GetSessions',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    draw: 1, start: 0, length: 1000,
+                    search: { value: '', regex: false },
+                    order: [{ column: 0, dir: 'asc' }],
+                    columns: []
+                }),
+                success: function (r) {
+                    var sel = $('#sessionFilter');
+                    if (r.data && Array.isArray(r.data)) {
+                        r.data.forEach(function (s) {
+                            sel.append('<option value="' + s.id + '">' + s.name + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+
+        function statusBadge(d) {
+            var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
+            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + (d || '--') + '</span>';
+        }
+
+        function stateBadge(d) {
+            var map = { Approved: 'success', Pending: 'warning text-dark', Rejected: 'danger', Cancelled: 'secondary' };
+            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + (d || '--') + '</span>';
+        }
+
+        function verificationBadge(d) {
+            var map = { Verified: 'success', Successful: 'primary', Failed: 'danger', Pending: 'warning text-dark' };
+            return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + (d || '--') + '</span>';
+        }
+
+        function verifyPayment(paymentId) {
+            Swal.fire({
+                title: 'Verify Online Payment?',
+                text: 'This confirms the Paystack charge and marks the payment as verified.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent3)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, verify'
+            }).then(function (result) {
+                if (!result.isConfirmed) return;
+                Swal.showLoading();
+                $.ajax({
+                    url: '/V1/VerifyOnlinePayment',
+                    type: 'POST',
+                    data: JSON.stringify({ PaymentId: paymentId }),
+                    contentType: 'application/json',
+                    success: function (r) {
+                        if (r.success) {
+                            Swal.fire({ icon: 'success', title: 'Verified!', text: r.message, timer: 2000, showConfirmButton: false })
+                                .then(function () { onlineTable.ajax.reload(); });
+                        } else {
+                            Swal.fire('Error', r.message || 'Verification failed.', 'error');
+                        }
+                    },
+                    error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
+                });
+            });
+        }
+
+        $(document).ready(function () {
+            loadFilters();
+
+            onlineTable = $('#onlineTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/V1/GetOnlinePayments',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: function (d) {
+                        d.SessionFilter = $('#sessionFilter').val() ? parseInt($('#sessionFilter').val()) : null;
+                        d.TermFilter = $('#termFilter').val() ? parseInt($('#termFilter').val()) : null;
+                        d.ClassFilter = $('#classFilter').val() ? parseInt($('#classFilter').val()) : null;
+                        d.VerificationStatusFilter = $('#verificationFilter').val() ? parseInt($('#verificationFilter').val()) : null;
+                        return JSON.stringify(d);
+                    }
+                },
+                columns: [
+                    { data: 'reference' },
+                    {
+                        data: null, width: '150px',
+                        render: function (d) {
+                            return `<span class='badge bg-dark'>${d.studentName}</span> <br /> <span class='badge bg-secondary'>${d.admissionNo}</span> `;
+                        }
+                    },
+                    { data: 'className' },
+                    { data: 'session' },
+                    { data: 'term' },
+                    {
+                        data: 'totalAmount', className: 'text-end',
+                        render: function (d) { return '₦' + parseFloat(d || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); }
+                    },
+                    { data: 'paymentDate', width: '110px' },
+                    {
+                        data: 'status', width: '100px', className: 'text-center',
+                        render: function (d) { return statusBadge(d); }
+                    },
+                    {
+                        data: 'state', width: '100px', className: 'text-center',
+                        render: function (d) { return stateBadge(d); }
+                    },
+                    {
+                        data: 'verificationStatus', width: '120px', className: 'text-center',
+                        render: function (d) { return verificationBadge(d); }
+                    },
+                    {
+                        data: 'verifiedBy', width: '110px',
+                        render: function (d, t, row) {
+                            return d || (row.verifiedAt ? '<span class="text-muted">' + row.verifiedAt + '</span>' : '--');
+                        }
+                    },
+                    {
+                        data: null, orderable: false, width: '90px', className: 'text-center',
+                        render: function (d, t, row) {
+                            let actions = '<a href="/Admin/Finance/Payments/Detail?id=' + row.paymentId + '" class="btn-action" title="View"><i class="bi bi-eye"></i></a>';
+                            if (canApprove && row.verificationStatus === 'Successful') {
+                                actions += ' <button class="btn-action text-success" title="Verify" onclick="verifyPayment(' + row.paymentId + ')"><i class="bi bi-shield-check"></i></button>';
+                            }
+                            return actions;
+                        }
+                    }
+                ],
+                order: [[6, 'desc']]
+            });
+
+            $('#sessionFilter, #termFilter, #classFilter, #verificationFilter').on('change', function () {
+                onlineTable.ajax.reload();
+            });
+        });
+    </script>
+}

@@ -36,5 +36,16 @@ namespace UpgradedSchoolManagementModels.ViewModels
         [Display(Name = "Examination Access Control")]
         public bool CanPrintResult { get; set; } = false;
 
+        // Paystack online payment configuration (admin only)
+        [Display(Name = "Paystack Secret Key")]
+        [StringLength(255)]
+        public string? PaystackSecretKey { get; set; }
+        [Display(Name = "Paystack Public Key")]
+        [StringLength(255)]
+        public string? PaystackPublicKey { get; set; }
+        [Display(Name = "Enable Online Payment")]
+        public bool EnableOnlinePayment { get; set; } = false;
+        public bool IsAdmin { get; set; } = false;
+
     }
 }

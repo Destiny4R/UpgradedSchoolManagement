@@ -108,6 +108,10 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public decimal TotalAmount { get; set; }
         public string Status { get; set; }
         public string State { get; set; }
+        public string? PaymentSourceLabel { get; set; }
+        public string? VerificationStatusLabel { get; set; }
+        public string? VerifiedBy { get; set; }
+        public DateTime? VerifiedAt { get; set; }
         public string? Narration { get; set; }
         public string? RecordedBy { get; set; }
         public string? RejectMessage { get; set; }
@@ -211,6 +215,7 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public string? RecordedBy { get; set; }
         public string State { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string PaymentSource { get; set; } = string.Empty;
         /// <summary>Remaining balance after this payment was recorded.</summary>
         public decimal RunningBalance { get; set; }
     }
@@ -329,6 +334,8 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public DateTime PaymentDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
+        public string PaymentSource { get; set; } = string.Empty;
+        public string VerificationStatus { get; set; } = string.Empty;
         public string? Narration { get; set; }
         public string Session { get; set; } = string.Empty;
         public string Term { get; set; } = string.Empty;
@@ -355,5 +362,97 @@ namespace UpgradedSchoolManagementModels.ViewModels
 
         public List<ReceiptBreakdownRow> Breakdown { get; set; } = new();
         public List<ReceiptPaymentHistoryRow> Payments { get; set; } = new();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ONLINE PAYMENT (PAYSTACK) MODELS
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// A pending payment item shown on the student dashboard with Pay Now / Paid actions.
+    /// </summary>
+    public class PendingOnlinePaymentItemVM
+    {
+        public int PaymentItemId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
+        public decimal ExpectedAmount { get; set; }
+        public decimal AlreadyPaid { get; set; }
+        public decimal Remaining => ExpectedAmount - AlreadyPaid;
+        public bool IsFullyPaid => Remaining <= 0;
+        /// <summary>True when an online payment for this item is awaiting Paystack confirmation.</summary>
+        public bool HasPendingOnlinePayment { get; set; }
+    }
+
+    /// <summary>
+    /// Request payload for initiating a Paystack transaction for a payment item.
+    /// </summary>
+    public class InitiateOnlinePaymentRequest
+    {
+        [Required]
+        public int TermRegistrationId { get; set; }
+
+        [Required]
+        public int PaymentItemId { get; set; }
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than zero.")]
+        public decimal? Amount { get; set; }
+    }
+
+    /// <summary>
+    /// Response returned to the client after initiating a Paystack transaction.
+    /// </summary>
+    public class InitiateOnlinePaymentResponse
+    {
+        public int PaymentId { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public string AuthorizationUrl { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+
+    /// <summary>
+    /// Row DTO for the admin online-payments verification DataTable.
+    /// </summary>
+    public class OnlinePaymentListRowDto
+    {
+        public int PaymentId { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public string StudentName { get; set; } = string.Empty;
+        public string AdmissionNo { get; set; } = string.Empty;
+        public string ClassName { get; set; } = string.Empty;
+        public string Session { get; set; } = string.Empty;
+        public string Term { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public DateTime PaymentDate { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string VerificationStatus { get; set; } = string.Empty;
+        public string? VerifiedBy { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+        public string? RecordedBy { get; set; }
+    }
+
+    /// <summary>
+    /// Public Paystack client configuration exposed to the browser (public key only).
+    /// </summary>
+    public class PaystackClientConfig
+    {
+        public bool Enabled { get; set; }
+        public string PublicKey { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Paystack transaction verification result normalized for internal use.
+    /// </summary>
+    public class PaystackVerificationResult
+    {
+        public bool Success { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string Currency { get; set; } = string.Empty;
+        public string? CustomerEmail { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public string? Message { get; set; }
     }
 }

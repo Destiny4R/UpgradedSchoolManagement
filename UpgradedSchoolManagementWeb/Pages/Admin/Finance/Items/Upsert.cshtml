@@ -4,6 +4,9 @@
     ViewData["Title"] = Model.IsEdit ? "Edit Payment Item" : "Add Payment Item";
     var item = Model.Item;
 }
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
 
 <div class="mgmt-page">
 
@@ -68,6 +71,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <script>
         const isEdit = @(Model.IsEdit ? "true" : "false");
 

@@ -7,11 +7,10 @@ using UpgradedSchoolManagementDataAccess.Seeders;
 using UpgradedSchoolManagementDataAccess.Services;
 using UpgradedSchoolManagementModels;
 using UpgradedSchoolManagementModels.Models;
+using UpgradedSchoolManagementUltitlities;
 using UpgradedSchoolManagementWeb.Authorization;
 using UpgradedSchoolManagementWeb.Services;
 using Microsoft.Extensions.Options;
-using UpgradedSchoolManagementDataAccess.IServices;
-using UpgradedSchoolManagementDataAccess.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,7 +63,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicies();
 });
 
-builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -85,6 +86,7 @@ builder.Services.AddScoped<IPaymentSetupService, PaymentSetupService>();
 builder.Services.AddScoped<IStudentPaymentService, StudentPaymentService>();
 builder.Services.AddScoped<IPaymentReportService, PaymentReportService>();
 builder.Services.AddScoped<IAppSettingsService, AppSettingsService>();
+builder.Services.AddScoped<IPaystackPaymentService, PaystackPaymentService>();
 builder.Services.AddScoped<IClassTermInformationService, ClassTermInformationService>();
 builder.Services.AddScoped<ITermGeneralInformationService, TermGeneralInformationService>();
 builder.Services.AddScoped<IResultManagerService, ResultManagerService>();
@@ -96,8 +98,7 @@ builder.Services.AddScoped<DashboardService>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.Configure<SchoolConfigurationSetup>(
-    builder.Configuration.GetSection(SchoolConfigurationSetup.SectionName));
+builder.Services.Configure<SchoolConfigurationSetup>(builder.Configuration.GetSection("SchoolConfigurationSetup"));
 
 builder.Services.AddControllersWithViews().AddNewtonsoftJson(options =>
     options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
@@ -122,7 +123,7 @@ using (var scope = app.Services.CreateScope())
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
 

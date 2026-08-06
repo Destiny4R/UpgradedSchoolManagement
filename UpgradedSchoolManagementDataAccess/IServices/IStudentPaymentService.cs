@@ -64,5 +64,48 @@ namespace UpgradedSchoolManagementDataAccess.IServices
         /// including expected vs paid breakdown and individual payment history.
         /// </summary>
         Task<FullTermReceiptViewModel?> GetFullTermReceiptAsync(int termRegId);
+
+        // ── ONLINE PAYMENT (PAYSTACK) ──────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the flat list of payable items for a term registration with
+        /// remaining balance and online-payment state, for the student dashboard.
+        /// </summary>
+        Task<List<PendingOnlinePaymentItemVM>> GetPendingPaymentsAsync(int termRegId);
+
+        /// <summary>
+        /// Creates a Pending online payment, initializes a Paystack transaction,
+        /// and returns the hosted payment URL. The payment stays Pending until the
+        /// Paystack webhook confirms it.
+        /// </summary>
+        Task<ApiResponse<InitiateOnlinePaymentResponse>> InitiateOnlinePaymentAsync(
+            int termRegId, int paymentItemId, decimal? amount, string? recordedBy, string callbackUrl);
+
+        /// <summary>
+        /// Applies a Paystack verification result to a payment (called from the
+        /// webhook and the callback page). Idempotent — only transitions Pending payments.
+        /// </summary>
+        Task<ApiResponse<bool>> ApplyPaystackVerificationAsync(string reference, PaystackVerificationResult verification);
+
+        /// <summary>
+        /// Confirms an online payment by re-verifying with Paystack (used on the
+        /// student callback page so the UI updates without waiting for the webhook).
+        /// </summary>
+        Task<ApiResponse<bool>> ConfirmOnlinePaymentAsync(string reference, string? confirmedBy);
+
+        /// <summary>
+        /// Marks a successful online payment as Verified (admin action).
+        /// Only online payments with VerificationStatus Successful can be verified,
+        /// and only once. Verification also approves the payment for reporting.
+        /// </summary>
+        Task<ApiResponse<bool>> VerifyOnlinePaymentAsync(int paymentId, string? verifiedBy);
+
+        /// <summary>
+        /// Returns a filtered, paged list of online payments for the admin
+        /// verification DataTable.
+        /// </summary>
+        Task<DataTablesResponse<OnlinePaymentListRowDto>> GetOnlinePaymentsPagedAsync(
+            DataTablesRequest request, int? sessionFilter = null, int? termFilter = null,
+            int? classFilter = null, int? verificationStatusFilter = null);
     }
 }

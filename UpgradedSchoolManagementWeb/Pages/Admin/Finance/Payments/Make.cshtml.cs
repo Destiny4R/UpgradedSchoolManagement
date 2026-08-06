@@ -20,6 +20,8 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments
 
         public string? EditPaymentDataJson { get; set; }
 
+        public bool EnableOnlinePayment { get; set; }
+
         public MakeModel(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
@@ -27,6 +29,9 @@ namespace UpgradedSchoolManagementWeb.Pages.Admin.Finance.Payments
 
         public async Task OnGet()
         {
+            var (enabled, _, _) = await _unitOfWork.PaystackPaymentService.GetSettingsAsync();
+            EnableOnlinePayment = enabled;
+
             SelectionView = new SelectionViewModal
             {
                 AcademicSession = await _unitOfWork.ViewSelectionService.GetSessionsForDropdownAsync(),

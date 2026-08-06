@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels.DTOs;
+using UpgradedSchoolManagementModels.Models;
 using UpgradedSchoolManagementModels.ViewModels;
 
 namespace UpgradedSchoolManagementWeb.Pages.result_manager
@@ -24,21 +25,28 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager
         }
         public void OnGet()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var appsettings = unitOfWork.AppSettingsServices.GetAppSettingsByUserIdAsync(userId).Result;
-
-            term = appsettings.Term.ToString();
-            session = appsettings.SesseionTable.Name;
-            schoolclass = $"{appsettings.SchoolClasses.Name} - {appsettings.SubClassTable.Name}";
-            var resultModel = new TermObjects
+            try
             {
-                SessionId = appsettings.SesseionTable.Id,
-                Term = appsettings.Term.Value,
-                schoolClassId = appsettings.SchoolClasses.Id,
-                SubclassId = appsettings.SubClassTable.Id
-            };
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var appsettings = unitOfWork.AppSettingsServices.GetAppSettingsByUserIdAsync(userId).Result;
 
-            ResultSheet = unitOfWork.ResultManagerServices.GetResultSheetAsync(resultModel).Result;
+                term = appsettings.Term.ToString();
+                session = appsettings?.SesseionTable?.Name ?? null;
+                schoolclass = $"{appsettings?.SchoolClasses?.Name} - {appsettings?.SubClassTable?.Name}";
+                var resultModel = new TermObjects
+                {
+                    SessionId = appsettings.SesseionTable.Id,
+                    Term = appsettings.Term.Value,
+                    schoolClassId = appsettings.SchoolClasses.Id,
+                    SubclassId = appsettings.SubClassTable.Id
+                };
+
+                ResultSheet = unitOfWork.ResultManagerServices.GetResultSheetAsync(resultModel).Result;
+            }
+            catch(Exception ex)
+            {
+                
+            }
         }
         public void LoadSelectionData()
         {

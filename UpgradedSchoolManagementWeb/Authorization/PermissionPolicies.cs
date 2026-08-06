@@ -18,6 +18,8 @@ namespace UpgradedSchoolManagementWeb.Authorization
                 policy.Requirements.Add(new PermissionRequirement(PermissionConstants.Students.Delete)));
             options.AddPolicy("Student.Promote", policy =>
                 policy.Requirements.Add(new PermissionRequirement(PermissionConstants.Students.Promote)));
+            options.AddPolicy("Student.Import", policy =>
+                policy.Requirements.Add(new PermissionRequirement(PermissionConstants.Students.Import)));
 
             // Teachers
             options.AddPolicy("Teacher.View", policy =>

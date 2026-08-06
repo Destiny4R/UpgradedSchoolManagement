@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -31,15 +31,16 @@ namespace UpgradedSchoolManagementWeb.Pages
             _logger = logger;
             _unitOfWork = unitOfWork;
             _env = env;
-            LoadDropdown();
         }
 
-        public void OnGet()
+        public async Task OnGetAsync()
         {
+            await LoadDropdownAsync();
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!string.IsNullOrEmpty(userId))
             {
-                var settings = _unitOfWork.AppSettingsServices.GetAppSettingsByUserIdAsync(userId).Result;
+                var settings = await _unitOfWork.AppSettingsServices.GetAppSettingsByUserIdAsync(userId);
                 if (settings != null)
                 {
                     appsettingView = new AppsettingViewModel();
@@ -54,8 +55,17 @@ namespace UpgradedSchoolManagementWeb.Pages
                     appsettingView.CashierName = settings.CashierName ?? "";
                     appsettingView.CashierSignatureUrl = settings.CashierSignature;
                     appsettingView.CanPrintResult = settings.CanPrintResult;
-                    
+                    appsettingView.EnableOnlinePayment = settings.EnableOnlinePayment;
+                    appsettingView.IsAdmin = settings.IsAdmin;
+
                     isAdmin = settings.IsAdmin;
+
+                    // Paystack keys are only exposed to the admin row (never sent to non-admin clients)
+                    if (settings.IsAdmin)
+                    {
+                        appsettingView.PaystackSecretKey = settings.PaystackSecretKey ?? "";
+                        appsettingView.PaystackPublicKey = settings.PaystackPublicKey ?? "";
+                    }
                 }
             }
         }
@@ -96,6 +106,14 @@ namespace UpgradedSchoolManagementWeb.Pages
                 settings.CashierSignature = await ImageCompressor.CompressAndSaveImageAsync(appsettingView.CashierSignature, _env.WebRootPath);
             }
 
+            // Paystack configuration may only be written on the admin settings row
+            if (settings.IsAdmin)
+            {
+                settings.PaystackSecretKey = appsettingView.PaystackSecretKey;
+                settings.PaystackPublicKey = appsettingView.PaystackPublicKey;
+                settings.EnableOnlinePayment = appsettingView.EnableOnlinePayment;
+            }
+
             await _unitOfWork.AppSettingsServices.UpsertAppSettingsAsync(settings);
 
             await _unitOfWork.AuditLogService.LogAsync(
@@ -112,14 +130,14 @@ namespace UpgradedSchoolManagementWeb.Pages
             return RedirectToPage();
         }
 
-        public void LoadDropdown()
+        public async Task LoadDropdownAsync()
         {
             SelectionView = new()
             {
-                AcademicSession = _unitOfWork.ViewSelectionService.GetSessionsForDropdownAsync().Result,
+                AcademicSession = await _unitOfWork.ViewSelectionService.GetSessionsForDropdownAsync(),
                 Terms = _unitOfWork.ViewSelectionService.GetTermForDropdown(),
-                SchoolClasses = _unitOfWork.ViewSelectionService.GetSchoolClassesForDropdownAsync().Result,
-                SubClass = _unitOfWork.ViewSelectionService.GetSchoolSubclassesForDropdownAsync().Result
+                SchoolClasses = await _unitOfWork.ViewSelectionService.GetSchoolClassesForDropdownAsync(),
+                SubClass = await _unitOfWork.ViewSelectionService.GetSchoolSubclassesForDropdownAsync()
             };
         }
     }

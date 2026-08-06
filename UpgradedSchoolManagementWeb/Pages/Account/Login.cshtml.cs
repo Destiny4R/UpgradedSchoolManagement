@@ -107,6 +107,7 @@ namespace UpgradedSchoolManagementWeb.Pages.Account
             if (result.Succeeded)
             {
                 await _userPermissionService.RefreshUserClaimsAsync(user.Id);
+                await _signInManager.RefreshSignInAsync(user);
 
                 await _auditLogService.LogAsync(
                     user.Id,

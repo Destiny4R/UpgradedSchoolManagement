@@ -9,7 +9,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
 {
     public class UnitOfWork : IUnitOfWork
     {
-        public UnitOfWork( IAuditLogService auditLogService, IClassService classService, IParentGuardianService parentGuardianService, IStudentService studentService, ISessionService sessionService, ISubjectService subjectService, ISidebarService sidebarService, ISubClassService subClassService, IViewSelectionService viewSelectionService, IUserPermissionService userPermissionService, ITermRegistrationServices termRegistrationServices, IStudentPaymentService studentPaymentService, IPaymentItemService paymentItemService, IPaymentSetupService paymentSetupService, IPaymentCategoryService paymentCategoryService, IPaymentReportService paymentReportService, IAppSettingsService appSettingsService, IClassTermInformationService classTermInformationService, ITermGeneralInformationService termGeneralInformationService, IResultManagerService resultManagerService, IResultSkillService resultSkillService, IEmployeeService employeeService)
+        public UnitOfWork( IAuditLogService auditLogService, IClassService classService, IParentGuardianService parentGuardianService, IStudentService studentService, ISessionService sessionService, ISubjectService subjectService, ISidebarService sidebarService, ISubClassService subClassService, IViewSelectionService viewSelectionService, IUserPermissionService userPermissionService, ITermRegistrationServices termRegistrationServices, IStudentPaymentService studentPaymentService, IPaymentItemService paymentItemService, IPaymentSetupService paymentSetupService, IPaymentCategoryService paymentCategoryService, IPaymentReportService paymentReportService, IAppSettingsService appSettingsService, IClassTermInformationService classTermInformationService, ITermGeneralInformationService termGeneralInformationService, IResultManagerService resultManagerService, IResultSkillService resultSkillService, IEmployeeService employeeService, IPaystackPaymentService paystackPaymentService)
         {
             AuditLogService = auditLogService;
             ClassService = classService;
@@ -33,6 +33,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
             ResultManagerServices = resultManagerService;
             ResultSkillServices = resultSkillService;
             EmployeeServices = employeeService;
+            PaystackPaymentService = paystackPaymentService;
         }
 
         public IAuditLogService AuditLogService { get; set; }
@@ -64,5 +65,6 @@ namespace UpgradedSchoolManagementDataAccess.Services
         public IResultManagerService ResultManagerServices { get; private set; }
         public IResultSkillService ResultSkillServices { get; private set; }
         public IEmployeeService EmployeeServices { get; private set; }
+        public IPaystackPaymentService PaystackPaymentService { get; private set; }
     }
 }

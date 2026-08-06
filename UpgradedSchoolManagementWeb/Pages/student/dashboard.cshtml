@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model UpgradedSchoolManagementWeb.Pages.student.dashboardModel
 @{
     ViewData["Title"] = "Student Dashboard";
@@ -98,7 +98,7 @@
                 </div>
                 <div class="mgmt-card-body">
                     <div class="table-responsive">
-                        <table id="termRegTable" class="table table-hover align-middle">
+                        <table id="termRegTable" class="table table-hover table-striped align-middle">
                             <thead>
                                 <tr>
                                     <th>Session</th>
@@ -109,7 +109,40 @@
                                     <th>Registered</th>
                                 </tr>
                             </thead>
-                            <tbody id="termRegBody"></tbody>
+                            <tbody id="termRegBody" class="text-success"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fee Payments -->
+            <div class="mgmt-card fade-in mb-4">
+                <div class="mgmt-card-head d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-credit-card me-2" style="color:var(--accent)"></i>My Fee Payments</h6>
+                    <a href="/student/payment-history" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-clock-history me-1"></i> Payment History
+                    </a>
+                </div>
+                <div class="mgmt-card-body">
+                    <div id="onlinePayDisabled" class="alert alert-info small mb-3" style="display:none">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Online payment is currently disabled. Please contact the school to make payments.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Fee Item</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount Due</th>
+                                    <th class="text-end">Paid So Far</th>
+                                    <th class="text-end">Remaining</th>
+                                    <th class="text-end">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feePaymentsBody">
+                                <tr><td colspan="6" class="text-muted text-center py-4">Loading your fee payments…</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -143,8 +176,8 @@
                                     <option value="">— Select Class —</option>
                                 </select>
                             </div>
-                            <button id="viewTermResultBtn" class="btn btn-primary w-100" disabled>
-                                <i class="bi bi-eye me-1"></i> View Term Result
+                            <button id="viewTermResultBtn" class="btn btn-primary w-100 mt-2" disabled>
+                                <i class="bi bi-printer me-1"></i> View Term Result
                             </button>
                         </div>
                     </div>
@@ -163,12 +196,12 @@
                                     <option value="">— Select Session —</option>
                                 </select>
                             </div>
-                            <div class="mb-4 d-flex align-items-center text-muted small">
+                            <div class="mb-4 d-flex align-items-center text-success small">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Annual result combines all three terms for the selected session.
                             </div>
                             <button id="viewAnnualResultBtn" class="btn btn-success w-100" disabled>
-                                <i class="bi bi-eye me-1"></i> View Annual Result
+                                <i class="bi bi-printer me-1"></i> View Annual Result
                             </button>
                         </div>
                     </div>
@@ -182,6 +215,8 @@
 @section Scripts {
     <script>
         var allRegs = [];
+        var currentRegId = null;
+        var onlinePayEnabled = false;
 
         function getUnique(arr, key) {
             return arr.map(function (r) { return r[key]; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
@@ -370,6 +405,103 @@
                 $.each(sessions, function (i, s) {
                     $('#termSessionSelect').append('<option value="' + s + '">' + s + '</option>');
                     $('#annualSessionSelect').append('<option value="' + s + '">' + s + '</option>');
+                });
+
+                // Load fee payments for the current registration
+                currentRegId = reg ? reg.id : null;
+                loadFeePayments(currentRegId);
+            });
+
+            function fmtNaira(v) {
+                return '₦' + Number(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function loadFeePayments(termRegId) {
+                var body = $('#feePaymentsBody');
+                if (!termRegId) {
+                    body.html('<tr><td colspan="6" class="text-muted text-center py-4">No active registration found.</td></tr>');
+                    return;
+                }
+
+                // Load Paystack config FIRST so onlinePayEnabled is set before the
+                // fee rows are rendered (avoids a race where rows show "Pay at school").
+                $.get('/V1/GetPaystackClientConfig')
+                    .done(function (cfg) {
+                        onlinePayEnabled = cfg && cfg.enabled === true;
+                        if (!onlinePayEnabled) {
+                            $('#onlinePayDisabled').show();
+                        }
+                        loadPendingPayments(termRegId, body);
+                    })
+                    .fail(function () {
+                        onlinePayEnabled = false;
+                        $('#onlinePayDisabled').show();
+                        loadPendingPayments(termRegId, body);
+                    });
+            }
+
+            function loadPendingPayments(termRegId, body) {
+                $.get('/Home/GetMyPendingPayments?termRegId=' + termRegId, function (res) {
+                    if (!res.success) {
+                        body.html('<tr><td colspan="6" class="text-muted text-center py-4">' + (res.message || 'Could not load fee payments.') + '</td></tr>');
+                        return;
+                    }
+                    if (!res.data || !res.data.length) {
+                        body.html('<tr><td colspan="6" class="text-success text-center py-4">No fee items are configured for your current session/term.</td></tr>');
+                        return;
+                    }
+
+                    var rows = '';
+                    res.data.forEach(function (item) {
+                        var statusCell;
+                        if (item.isFullyPaid) {
+                            statusCell = '<span class="badge bg-success">Paid</span>';
+                        } else if (item.hasPendingOnlinePayment) {
+                            statusCell = '<span class="badge bg-warning text-dark">Processing…</span>';
+                        } else if (!onlinePayEnabled) {
+                            statusCell = '<span class="badge bg-secondary">Pay at school</span>';
+                        } else {
+                            statusCell = '<button class="btn btn-sm btn-primary pay-now-btn" data-item-id="' + item.paymentItemId + '" data-remaining="' + item.remaining + '">' +
+                                '<i class="bi bi-credit-card me-1"></i>Pay Now</button>';
+                        }
+                        rows += '<tr>' +
+                            '<td>' + item.itemName + '</td>' +
+                            '<td>' + item.categoryName + '</td>' +
+                            '<td class="text-end">' + fmtNaira(item.expectedAmount) + '</td>' +
+                            '<td class="text-end text-success">' + fmtNaira(item.alreadyPaid) + '</td>' +
+                            '<td class="text-end">' + fmtNaira(item.remaining) + '</td>' +
+                            '<td class="text-end">' + statusCell + '</td>' +
+                            '</tr>';
+                    });
+                    body.html(rows);
+                });
+            }
+
+            $(document).on('click', '.pay-now-btn', function () {
+                var btn = $(this);
+                if (!currentRegId) return;
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Redirecting…');
+                $.ajax({
+                    url: '/V1/InitiateOnlinePayment',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        termRegistrationId: parseInt(currentRegId),
+                        paymentItemId: parseInt(btn.data('item-id')),
+                        amount: null
+                    }),
+                    success: function (res) {
+                        if (res.success && res.data && res.data.authorizationUrl) {
+                            window.location.href = res.data.authorizationUrl;
+                        } else {
+                            btn.prop('disabled', false).html('<i class="bi bi-credit-card me-1"></i>Pay Now');
+                            alert(res.message || 'Could not start online payment.');
+                        }
+                    },
+                    error: function () {
+                        btn.prop('disabled', false).html('<i class="bi bi-credit-card me-1"></i>Pay Now');
+                        alert('Network error. Please try again.');
+                    }
                 });
             });
 

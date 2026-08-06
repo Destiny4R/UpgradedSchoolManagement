@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model UpgradedSchoolManagementWeb.Pages.student.payment_historyModel
 @{
     ViewData["Title"] = "Payment History";
@@ -29,6 +29,7 @@
                             <th>Term</th>
                             <th>Items</th>
                             <th>Amount (₦)</th>
+                            <th>Source</th>
                             <th>Status</th>
                             <th>State</th>
                             <th>Date</th>
@@ -68,6 +69,15 @@
                         render: function (d) { return '₦' + Number(d).toLocaleString(undefined, { minimumFractionDigits: 2 }); }
                     },
                     {
+                        data: 'paymentSource', width: '130px', className: 'text-center',
+                        render: function (d) {
+                            if (d && d.indexOf('Online') !== -1) {
+                                return '<span class="badge bg-info text-dark">Online (Paystack)</span>';
+                            }
+                            return '<span class="badge bg-secondary">Recorded Manually</span>';
+                        }
+                    },
+                    {
                         data: 'status', width: '90px', className: 'text-center',
                         render: function (d) {
                             var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
@@ -97,7 +107,7 @@
                         }
                     }
                 ],
-                order: [[7, 'desc']],
+                order: [[8, 'desc']],
                 language: { emptyTable: 'No payments found.' }
             });
         });

@@ -291,6 +291,24 @@
     </style>
 </head>
 <body>
+    @if (!Model.IsAllowed)
+    {
+        <div class="container py-5">
+            <div class="card-w px-4 py-4">
+                <h4 class="text-danger mb-3">Report Access Restricted</h4>
+                <p>@Model.AccessMessage</p>
+                <ul>
+                    @foreach (var item in Model.OutstandingPayments)
+                    {
+                        <li>@item.PaymentItemName &mdash; outstanding balance: &#8358;@item.Balance.ToString("0.00")</li>
+                    }
+                </ul>
+                <p class="text-danger fw-bold">Total outstanding: &#8358;@Model.TotalOutstanding.ToString("0.00"). Please complete payment before viewing or printing this report.</p>
+            </div>
+        </div>
+    }
+    else
+    {
     <div class="container py-2" style="max-width:100%;">
 
         <!-- ══ HEADER ══ -->
@@ -525,6 +543,7 @@
 
         <p class="text-center text-muted" style="font-size:0.7rem;">This Annual Report is computer-generated and authentic. Falsification is a criminal offence under Nigerian law. &copy; @DateTime.UtcNow.Year @Model.Report.SchoolName.</p>
     </div>
+    }
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

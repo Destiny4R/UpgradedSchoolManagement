@@ -1,0 +1,52 @@
+@page
+@model UpgradedSchoolManagementWeb.Pages.student.payment_callbackModel
+@{
+    ViewData["Title"] = "Payment Status";
+}
+<div class="mgmt-page">
+    <div class="mgmt-header fade-in">
+        <div>
+            <div class="mgmt-title"><i class="bi bi-credit-card me-2" style="color:var(--accent)"></i>Payment Status</div>
+            <div class="mgmt-sub">Confirmation of your online payment</div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="mgmt-card fade-in">
+                <div class="mgmt-card-body text-center py-5">
+                    @if (Model.Success && Model.IsConfirmed)
+                    {
+                        <div class="display-5 text-success mb-3"><i class="bi bi-check-circle-fill"></i></div>
+                        <h5 class="text-success">Payment Confirmed</h5>
+                        <p class="text-muted mb-2">@Model.Message</p>
+                        <p class="small text-muted mb-4">Reference: <span class="fw-bold">@Model.Reference</span></p>
+                        <p class="small text-muted">
+                            Your payment has been recorded and will be verified by the school. Refreshing your
+                            dashboard may take a few moments for the status to update.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2 mt-4">
+                            <a href="/student/dashboard" class="btn btn-primary"><i class="bi bi-speedometer2 me-1"></i> Back to Dashboard</a>
+                            <a href="/student/payment-history" class="btn btn-outline-primary"><i class="bi bi-clock-history me-1"></i> Payment History</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="display-5 text-warning mb-3"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                        <h5>Payment Not Confirmed</h5>
+                        <p class="text-muted mb-2">@Model.Message</p>
+                        <p class="small text-muted mb-4">Reference: <span class="fw-bold">@Model.Reference</span></p>
+                        <p class="small text-muted">
+                            Your payment may still be processing. If you were charged but this page did not confirm,
+                            please wait a moment and check your payment history before contacting the school.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2 mt-4">
+                            <a href="/student/dashboard" class="btn btn-primary"><i class="bi bi-speedometer2 me-1"></i> Back to Dashboard</a>
+                            <a href="/student/payment-history" class="btn btn-outline-primary"><i class="bi bi-clock-history me-1"></i> Payment History</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -345,6 +345,24 @@ namespace UpgradedSchoolManagementWeb.Controllers
             return Json(result);
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetMyPendingPayments(long termRegId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var student = await _studentService.GetStudentByUserId(userId);
+            if (student == null)
+                return Json(new { success = false, message = "Student record not found" });
+
+            var ownsReg = await _dbContext.TermRegistrations
+                .AnyAsync(tr => tr.Id == termRegId && tr.StudentId == student.Id);
+            if (!ownsReg)
+                return Json(new { success = false, message = "Registration not found." });
+
+            var items = await _studentPaymentService.GetPendingPaymentsAsync((int)termRegId);
+            return Json(new { success = true, termRegId, data = items });
+        }
+
         [HttpPost]
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> GetMyTermRegistrations()

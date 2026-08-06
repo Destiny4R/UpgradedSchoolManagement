@@ -963,6 +963,94 @@ namespace UpgradedSchoolManagementWeb.Controllers
             return Json(notifications);
         }
 
+        // ── ONLINE PAYMENT (PAYSTACK) ────────────────────────────────
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetPaystackClientConfig()
+        {
+            var (enabled, _, publicKey) = await _unitOfWork.PaystackPaymentService.GetSettingsAsync();
+            return Json(new PaystackClientConfig { Enabled = enabled, PublicKey = publicKey ?? string.Empty });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> InitiateOnlinePayment([FromBody] InitiateOnlinePaymentRequest? request)
+        {
+            if (request == null || request.TermRegistrationId <= 0 || request.PaymentItemId <= 0)
+            {
+                if (Request.HasFormContentType)
+                {
+                    request = new InitiateOnlinePaymentRequest
+                    {
+                        TermRegistrationId = int.TryParse(Request.Form["termRegistrationId"], out var trId) ? trId : 0,
+                        PaymentItemId = int.TryParse(Request.Form["paymentItemId"], out var pId) ? pId : 0,
+                        Amount = decimal.TryParse(Request.Form["amount"], out var amt) ? amt : null
+                    };
+                }
+            }
+
+            if (request == null || request.TermRegistrationId <= 0 || request.PaymentItemId <= 0)
+                return Json(new { success = false, message = "Term registration and payment item are required." });
+
+            var callbackUrl = $"{Request.Scheme}://{Request.Host}/student/payment-callback";
+            var username = User.Identity?.Name;
+
+            var result = await _studentPaymentService.InitiateOnlinePaymentAsync(
+                request.TermRegistrationId, request.PaymentItemId, request.Amount, username, callbackUrl);
+
+            if (result.Success)
+            {
+                await _auditLogService.LogAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                    username ?? "",
+                    "ONLINE_PAYMENT_INIT", "Payments",
+                    $"Initiated Paystack payment {result.Data.Reference} for ₦{result.Data.Amount:N2} (TermReg {request.TermRegistrationId}).");
+            }
+
+            return Json(new { success = result.Success, message = result.Message, data = result.Data });
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "Finance.View")]
+        public async Task<IActionResult> GetOnlinePayments([FromBody] OnlinePaymentsDataTablesRequest request)
+        {
+            var result = await _studentPaymentService.GetOnlinePaymentsPagedAsync(
+                request,
+                sessionFilter: request.SessionFilter,
+                termFilter: request.TermFilter,
+                classFilter: request.ClassFilter,
+                verificationStatusFilter: request.VerificationStatusFilter);
+            return Json(result);
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "Finance.PaymentApprove")]
+        public async Task<IActionResult> VerifyOnlinePayment([FromBody] VerifyOnlinePaymentRequest request)
+        {
+            var username = User.Identity?.Name;
+            var result = await _studentPaymentService.VerifyOnlinePaymentAsync(request.PaymentId, username);
+
+            if (result.Success)
+            {
+                await _auditLogService.LogAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                    username ?? "",
+                    "ONLINE_PAYMENT_VERIFY", "Payments",
+                    $"Verified online payment #{request.PaymentId}.");
+            }
+            else
+            {
+                await _auditLogService.LogAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                    username ?? "",
+                    "ONLINE_PAYMENT_VERIFY_FAILED", "Payments",
+                    $"Verification attempt rejected for payment #{request.PaymentId}: {result.Message}");
+            }
+
+            return Json(new { success = result.Success, message = result.Message });
+        }
+
         // ── NEW: Single-item payment flow ─────────────────────────────
 
         [HttpPost]
@@ -1661,5 +1749,18 @@ namespace UpgradedSchoolManagementWeb.Controllers
     {
         public string UserId { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class OnlinePaymentsDataTablesRequest : DataTablesRequest
+    {
+        public int? SessionFilter { get; set; }
+        public int? TermFilter { get; set; }
+        public int? ClassFilter { get; set; }
+        public int? VerificationStatusFilter { get; set; }
+    }
+
+    public class VerifyOnlinePaymentRequest
+    {
+        public int PaymentId { get; set; }
     }
 }

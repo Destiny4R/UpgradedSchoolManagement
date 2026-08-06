@@ -5,6 +5,7 @@
 }
 @section Sheets {
     <partial name="_DataTablesSheetFiles" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
 }
 
 <div class="mgmt-page">
@@ -46,6 +47,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <partial name="_DataTablesScriptsFiles" />
     <script>
         let categoriesTable;
@@ -78,7 +80,7 @@
                         data: 'id', orderable: false, width: '100px',
                         render: function (data) {
                             return `<div class="dropdown text-center">
-                                <button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                <button class="btn-action " data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="/Admin/Finance/Categories/Upsert?id=${data}"><i class="bi bi-pencil-square"></i>Edit</a></li>
                                     <li><hr class="dropdown-divider"></li>

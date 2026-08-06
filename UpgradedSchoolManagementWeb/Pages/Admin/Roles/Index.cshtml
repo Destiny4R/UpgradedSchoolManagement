@@ -5,6 +5,7 @@
     ViewData["Title"] = "Manage Roles";
 }
 @section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
     <partial name="_DataTablesSheetFiles" />
 }
 
@@ -50,6 +51,8 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/jquery.blockUI/jquery.blockUI.min.js"></script>
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <partial name="_DataTablesScriptsFiles" />
     <script>
         const perms = @Html.Raw(Model.PermissionsJson);
@@ -85,7 +88,7 @@
                     {
                         data: 'id',
                         render: function (data, type, row) {
-                            var html = '<div class="dropdown text-center"><button class="btn-action dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu dropdown-menu-end">';
+                            var html = '<div class="dropdown text-center"><button class="btn-action " data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu dropdown-menu-end">';
                             if (perms['Role.Edit']) {
                                 html += '<li><a class="dropdown-item" href="/Admin/Roles/Edit?id=' + data + '&name=' + encodeURIComponent(row.name) + '&description=' + encodeURIComponent(row.description || '') + '"><i class="bi bi-pencil-square"></i>Edit</a></li>';
                             }

@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Role Permissions";
 }
+@section Sheets {
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
+}
 
 <div class="mgmt-page">
 
@@ -44,6 +47,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <script>
         var allPermissions = [];
         var assignedCodes = [];

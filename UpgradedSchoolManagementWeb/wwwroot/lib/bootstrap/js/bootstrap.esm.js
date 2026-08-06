@@ -3759,7 +3759,7 @@ const SELECTOR_NAV_ITEMS = '.nav-item';
 const SELECTOR_LIST_ITEMS = '.list-group-item';
 const SELECTOR_LINK_ITEMS = `${SELECTOR_NAV_LINKS}, ${SELECTOR_NAV_ITEMS} > ${SELECTOR_NAV_LINKS}, ${SELECTOR_LIST_ITEMS}`;
 const SELECTOR_DROPDOWN = '.dropdown';
-const SELECTOR_DROPDOWN_TOGGLE$1 = '.dropdown-toggle';
+const SELECTOR_DROPDOWN_TOGGLE$1 = '.';
 const Default$1 = {
   offset: null,
   // TODO: v6 @deprecated, keep it for backwards compatibility reasons

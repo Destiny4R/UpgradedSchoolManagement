@@ -8,7 +8,7 @@
   position: relative;
 }
 
-.dropdown-toggle {
+. {
   white-space: nowrap;
 
   // Generate the caret automatically
@@ -120,7 +120,7 @@
     margin-bottom: var(--#{$prefix}dropdown-spacer);
   }
 
-  .dropdown-toggle {
+  . {
     @include caret(up);
   }
 }
@@ -134,7 +134,7 @@
     margin-left: var(--#{$prefix}dropdown-spacer);
   }
 
-  .dropdown-toggle {
+  . {
     @include caret(end);
     &::after {
       vertical-align: 0;
@@ -151,7 +151,7 @@
     margin-right: var(--#{$prefix}dropdown-spacer);
   }
 
-  .dropdown-toggle {
+  . {
     @include caret(start);
     &::before {
       vertical-align: 0;

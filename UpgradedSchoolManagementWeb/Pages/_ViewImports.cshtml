@@ -1,6 +1,12 @@
 ﻿@using UpgradedSchoolManagementWeb
+@inject IOptions<SchoolConfigurationSetup> SchoolConfig
+@using UpgradedSchoolManagementDataAccess.Data
 @using UpgradedSchoolManagementUltitlities
 @using UpgradedSchoolManagementModels.Models
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @using UpgradedSchoolManagementDataAccess.Data
 @namespace UpgradedSchoolManagementWeb.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

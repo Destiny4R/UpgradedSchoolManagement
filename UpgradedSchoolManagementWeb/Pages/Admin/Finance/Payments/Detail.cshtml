@@ -54,8 +54,12 @@
                     <table class="table table-sm table-borderless mb-0">
                         <tr><td class="text-muted ps-0">Reference</td><td class="fw-semibold font-monospace" id="reference">--</td></tr>
                         <tr><td class="text-muted ps-0">Total Amount</td><td class="fw-semibold" id="totalAmount">--</td></tr>
+                        <tr><td class="text-muted ps-0">Source</td><td id="sourceBadge">--</td></tr>
                         <tr><td class="text-muted ps-0">Status</td><td id="statusBadge">--</td></tr>
                         <tr><td class="text-muted ps-0">State</td><td id="stateBadge">--</td></tr>
+                        <tr><td class="text-muted ps-0">Verification</td><td id="verificationBadge">--</td></tr>
+                        <tr><td class="text-muted ps-0">Verified By</td><td class="fw-semibold" id="verifiedBy">--</td></tr>
+                        <tr><td class="text-muted ps-0">Verified At</td><td class="fw-semibold" id="verifiedAt">--</td></tr>
                         <tr><td class="text-muted ps-0">Payment Date</td><td class="fw-semibold" id="paymentDate">--</td></tr>
                         <tr><td class="text-muted ps-0">Narration</td><td id="narration">--</td></tr>
                         <tr><td class="text-muted ps-0">Recorded By</td><td class="fw-semibold" id="recordedBy">--</td></tr>
@@ -88,6 +92,12 @@
                     </div>
                     <div id="rejectedActions" style="display:none">
                         <p class="small text-danger mb-2"><i class="bi bi-x-circle-fill me-1"></i> Payment was rejected.</p>
+                    </div>
+                    <div id="verifyOnlineActions" style="display:none">
+                        <p class="small text-muted mb-2"><i class="bi bi-globe2 me-1"></i> Online payment received. Confirm against Paystack before completing.</p>
+                        <button class="btn btn-success w-100" onclick="verifyOnlinePayment()">
+                            <i class="bi bi-shield-check me-1"></i> Verify Online Payment
+                        </button>
                     </div>
                     <hr />
                     <a id="evidenceLink" href="#" class="btn btn-outline-secondary w-100" style="display:none" target="_blank">
@@ -178,9 +188,19 @@
 
             var statusMap = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
             var stateMap = { Approved: 'success', Pending: 'warning text-dark', Rejected: 'danger', Cancelled: 'secondary' };
+            var verifMap = { Verified: 'success', Successful: 'primary', Failed: 'danger', Pending: 'warning text-dark' };
+
+            var isOnline = d.paymentSourceLabel && d.paymentSourceLabel.indexOf('Online') !== -1;
+            var sourceBadgeHtml = isOnline
+                ? '<span class="badge bg-info text-dark">Online (Paystack)</span>'
+                : '<span class="badge bg-secondary">Recorded Manually (System User)</span>';
+            $('#sourceBadge').html(sourceBadgeHtml);
 
             $('#statusBadge').html('<span class="badge bg-' + (statusMap[d.status] || 'secondary') + '">' + (d.status || '--') + '</span>');
             $('#stateBadge').html('<span class="badge bg-' + (stateMap[d.state] || 'secondary') + '">' + (d.state || '--') + '</span>');
+            $('#verificationBadge').html('<span class="badge bg-' + (verifMap[d.verificationStatusLabel] || 'secondary') + '">' + (d.verificationStatusLabel || '--') + '</span>');
+            $('#verifiedBy').text(d.verifiedBy || '--');
+            $('#verifiedAt').text(d.verifiedAt || '--');
 
             if (d.state === 'Pending') {
                 $('#pendingActions').show();
@@ -188,6 +208,10 @@
                 $('#completedActions').show();
             } else if (d.state === 'Rejected') {
                 $('#rejectedActions').show();
+            }
+
+            if (isOnline && d.verificationStatusLabel === 'Successful') {
+                $('#verifyOnlineActions').show();
             }
 
             var receiptUrl = '/Admin/Finance/Payments/Receipt?id=' + paymentId;
@@ -357,6 +381,36 @@
                     error: function () {
                         Swal.fire('Error', 'An error occurred while updating payment.', 'error');
                     }
+                });
+            });
+        }
+
+        function verifyOnlinePayment() {
+            Swal.fire({
+                title: 'Verify Online Payment?',
+                text: 'This confirms the Paystack charge and marks the payment as verified.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--accent3)',
+                cancelButtonColor: 'var(--muted)',
+                confirmButtonText: 'Yes, verify'
+            }).then(function (result) {
+                if (!result.isConfirmed) return;
+                Swal.showLoading();
+                $.ajax({
+                    url: '/V1/VerifyOnlinePayment',
+                    type: 'POST',
+                    data: JSON.stringify({ PaymentId: parseInt(paymentId) }),
+                    contentType: 'application/json',
+                    success: function (r) {
+                        if (r.success) {
+                            Swal.fire({ icon: 'success', title: 'Verified!', text: r.message, timer: 2000, showConfirmButton: false })
+                                .then(function () { location.reload(); });
+                        } else {
+                            Swal.fire('Error', r.message || 'Verification failed.', 'error');
+                        }
+                    },
+                    error: function () { Swal.fire('Error', 'An error occurred.', 'error'); }
                 });
             });
         }

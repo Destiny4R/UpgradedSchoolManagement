@@ -6,6 +6,7 @@
 @section Sheets {
     <partial name="_DataTablesSheetFiles" />
     <link href="~/lib/jquery-multiselect-master/jquery.multiselect.css" rel="stylesheet" />
+    <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
 }
 
 <div class="mgmt-page">
@@ -184,6 +185,7 @@
 
 
 @section Scripts {
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <partial name="_DataTablesScriptsFiles" />
     <script src="~/lib/jquery-multiselect-master/jquery.multiselect.js"></script>
     <script>
@@ -264,7 +266,7 @@
                 toggleDeleteSelectedBtn();
             });
 
-        $('#batchSubjects').multiselect({
+            $('#batchSubjects').multiselect({
                 columns: 2,
                 placeholder: 'Select Subjects',
                 search: true,
@@ -330,6 +332,90 @@
                     }
                 });
             });
+
+            // --- BATCH EXCEL REGISTRATION LOGIC ---
+            $('#btnSubmitBatchExcel').on('click', function() {
+                // Validate form
+                const session = $('#batchSession').val();
+                const term = $('#batchTerm').val();
+                const schoolclass = $('#batchClass').val();
+                const subclass = $('#batchSubClass').val();
+                const fileInput = $('#batchExcelFile')[0].files[0];
+
+                if (!session || !term || !schoolclass || !subclass || !fileInput) {
+                    Swal.fire('Validation Error', 'Please select all required fields and upload an Excel file.', 'warning');
+                    return;
+                }
+
+                // Get selected subjects
+                const subjects = $('#batchSubjects').val();
+                const subjectString = subjects ? subjects.join(',') : '';
+
+                // Create FormData
+                const formData = new FormData();
+                formData.append('Term', term);
+                formData.append('SessionId', session);
+                formData.append('SchoolClassId', schoolclass);
+                formData.append('SubClassId', subclass);
+                formData.append('Subjects', subjectString);
+                formData.append('ExcelFile', fileInput);
+
+                // Show loading state
+                const btn = $(this);
+                const originalText = btn.html();
+                btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
+
+                // Hide previous results
+                $('#batchResultsContainer').hide();
+                $('#batchResultsErrors').hide();
+                $('#batchErrorsList').empty();
+
+                $.ajax({
+                    url: '/V1/BatchExcelRegistration',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
+                    success: function(res) {
+                        btn.html(originalText).prop('disabled', false);
+
+                        $('#batchResultsContainer').show();
+
+                        if (res.success) {
+                            $('#batchResultsSummary').html(`
+                                    <div class="alert alert-success mb-0">
+                                        <i class="bi bi-check-circle-fill me-2"></i> ${res.message}
+                                    </div>
+                                `);
+                            studentsTable.ajax.reload();
+                        } else {
+                            let alertClass = res.successCount > 0 ? 'alert-warning' : 'alert-danger';
+                            $('#batchResultsSummary').html(`
+                                    <div class="alert ${alertClass} mb-0">
+                                        <i class="bi bi-exclamation-circle-fill me-2"></i> ${res.message}
+                                    </div>
+                                `);
+
+                            if (res.errors && res.errors.length > 0) {
+                                $('#batchResultsErrors').show();
+                                let errorsHtml = '<ul class="mb-0 text-danger">';
+                                res.errors.forEach(e => {
+                                    errorsHtml += `<li>${e}</li>`;
+                                });
+                                errorsHtml += '</ul>';
+                                $('#batchErrorsList').html(errorsHtml);
+                            }
+                        }
+                    },
+                    error: function() {
+                        btn.html(originalText).prop('disabled', false);
+                        Swal.fire('Error', 'An unexpected error occurred during upload. Please try again.', 'error');
+                    }
+                });
+            });
+
+
         });
 
         function toggleDeleteSelectedBtn() {
@@ -381,88 +467,6 @@
                 }
             });
         }
-
-        // --- BATCH EXCEL REGISTRATION LOGIC ---
-        $('#btnSubmitBatchExcel').on('click', function () {
-            // Validate form
-            const session = $('#batchSession').val();
-            const term = $('#batchTerm').val();
-            const schoolclass = $('#batchClass').val();
-            const subclass = $('#batchSubClass').val();
-            const fileInput = $('#batchExcelFile')[0].files[0];
-
-            if (!session || !term || !schoolclass || !subclass || !fileInput) {
-                Swal.fire('Validation Error', 'Please select all required fields and upload an Excel file.', 'warning');
-                return;
-            }
-
-            // Get selected subjects
-            const subjects = $('#batchSubjects').val();
-            const subjectString = subjects ? subjects.join(',') : '';
-
-            // Create FormData
-            const formData = new FormData();
-            formData.append('Term', term);
-            formData.append('SessionId', session);
-            formData.append('SchoolClassId', schoolclass);
-            formData.append('SubClassId', subclass);
-            formData.append('Subjects', subjectString);
-            formData.append('ExcelFile', fileInput);
-
-            // Show loading state
-            const btn = $(this);
-            const originalText = btn.html();
-            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
-
-            // Hide previous results
-            $('#batchResultsContainer').hide();
-            $('#batchResultsErrors').hide();
-            $('#batchErrorsList').empty();
-
-            $.ajax({
-                url: '/V1/BatchExcelRegistration',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                success: function (res) {
-                    btn.html(originalText).prop('disabled', false);
-
-                    $('#batchResultsContainer').show();
-
-                    if (res.success) {
-                        $('#batchResultsSummary').html(`
-                            <div class="alert alert-success mb-0">
-                                <i class="bi bi-check-circle-fill me-2"></i> ${res.message}
-                            </div>
-                        `);
-                        studentsTable.ajax.reload();
-                    } else {
-                        let alertClass = res.successCount > 0 ? 'alert-warning' : 'alert-danger';
-                        $('#batchResultsSummary').html(`
-                            <div class="alert ${alertClass} mb-0">
-                                <i class="bi bi-exclamation-circle-fill me-2"></i> ${res.message}
-                            </div>
-                        `);
-
-                        if (res.errors && res.errors.length > 0) {
-                            $('#batchResultsErrors').show();
-                            let errorsHtml = '<ul class="mb-0 text-danger">';
-                            res.errors.forEach(e => {
-                                errorsHtml += `<li>${e}</li>`;
-                            });
-                            errorsHtml += '</ul>';
-                            $('#batchErrorsList').html(errorsHtml);
-                        }
-                    }
-                },
-                error: function () {
-                    btn.html(originalText).prop('disabled', false);
-                    Swal.fire('Error', 'An unexpected error occurred during upload. Please try again.', 'error');
-                }
-            });
-        });
 
     </script>
 }

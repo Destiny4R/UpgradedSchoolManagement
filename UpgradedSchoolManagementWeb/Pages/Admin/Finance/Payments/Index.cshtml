@@ -14,9 +14,14 @@
             <div class="mgmt-title"><i class="bi bi-credit-card-2-front me-2" style="color:var(--accent)"></i>Student Payments</div>
             <div class="mgmt-sub">View, verify, approve, or reject fee payments</div>
         </div>
-        <a asp-page="Make" class="btn-mgmt-primary">
-            <i class="bi bi-plus-lg"></i> New Payment
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <a asp-page="OnlinePayments" class="btn-mgmt-secondary">
+                <i class="bi bi-globe2"></i> Online Payments
+            </a>
+            <a asp-page="Make" class="btn-mgmt-primary">
+                <i class="bi bi-plus-lg"></i> New Payment
+            </a>
+        </div>
     </div>
 
     <div class="mgmt-card fade-in">
@@ -69,6 +74,7 @@
                             <th>Term</th>
                             <th>Fees Amount</th>
                             <th>Amount</th>
+                            <th>Source</th>
                             <th>Status</th>
                             <th>State</th>
                             <th>Date</th>
@@ -153,6 +159,15 @@
                     { data: 'fees' },
                     { data: 'totalAmount' },
                     {
+                        data: 'paymentSource', width: '130px', className: 'text-center',
+                        render: function (d) {
+                            if (d && d.indexOf('Online') !== -1) {
+                                return '<span class="badge bg-info text-dark">Online (Paystack)</span>';
+                            }
+                            return '<span class="badge bg-secondary">Recorded Manually</span>';
+                        }
+                    },
+                    {
                         data: 'status', width: '100px', className: 'text-center',
                         render: function (d) {
                             var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
@@ -182,7 +197,7 @@
                         }
                     }
                 ],
-                order: [[10, 'desc']]
+                order: [[11, 'desc']]
             });
 
             $('#sessionFilter, #termFilter, #classFilter, #statusFilter, #stateFilter').on('change', function () {

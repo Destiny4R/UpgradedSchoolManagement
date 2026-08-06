@@ -160,8 +160,17 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("EnableOnlinePayment")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PaystackPublicKey")
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("PaystackSecretKey")
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PrincipalName")
                         .HasColumnType("nvarchar(100)");
@@ -957,6 +966,13 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("PaymentSource")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaystackReference")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
                     b.Property<string>("RecordedBy")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -983,6 +999,16 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int>("VerificationStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.HasKey("Id");
 

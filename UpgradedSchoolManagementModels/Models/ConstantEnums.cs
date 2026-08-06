@@ -26,6 +26,26 @@ namespace UpgradedSchoolManagementModels.Models
             Cancelled = 4
         }
 
+        public enum PaymentSource
+        {
+            Manual = 1,
+            Online = 2
+        }
+
+        public enum PaymentVerificationStatus
+        {
+            Pending = 1,
+            Successful = 2,
+            Failed = 3,
+            Verified = 4
+        }
+
+        public enum PaystackWebhookEvent
+        {
+            ChargeSuccess = 1,
+            TransferSuccess = 2
+        }
+
         public enum ResultType
         {
             Nursery = 1,

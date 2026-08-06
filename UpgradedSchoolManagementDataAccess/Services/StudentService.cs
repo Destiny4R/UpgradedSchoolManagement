@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using UpgradedSchoolManagementDataAccess.Data;
 using UpgradedSchoolManagementDataAccess.IServices;
 using UpgradedSchoolManagementModels;
 using UpgradedSchoolManagementModels.Models;
+using UpgradedSchoolManagementUltitlities;
 
 namespace UpgradedSchoolManagementDataAccess.Services
 {
@@ -11,18 +13,20 @@ namespace UpgradedSchoolManagementDataAccess.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IOptions<SchoolConfigurationSetup> _schoolConfig;
 
-        public StudentService(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public StudentService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IOptions<SchoolConfigurationSetup> schoolConfig)
         {
             _context = context;
             _userManager = userManager;
+            _schoolConfig = schoolConfig;
         }
 
         // ── Admission number ──────────────────────────────────────────────────────
         public async Task<string> GenerateAdmissionNumber()
         {
             var year = DateTime.UtcNow.Year;
-            var prefix = $"EDU/STD/{year}/";
+            var prefix = $"{_schoolConfig.Value.RegNumberPrefix}{year}/";
 
             // Find the highest sequence already used this year
             var lastSeq = await _context.StudentsTables
@@ -170,10 +174,10 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 // is handled by AdmissionNumberEmailValidator (uniqueness only).
                 var user = new ApplicationUser
                 {
-                    UserName  = admissionNumber,
-                    Email     = admissionNumber,
-                    FullName  = $"{input.FirstName} {input.Surname}",
-                    IsActive  = true,
+                    UserName = admissionNumber,
+                    Email = admissionNumber,
+                    FullName = $"{input.FirstName} {input.Surname}",
+                    IsActive = true,
                     CreatedDate = DateTime.UtcNow
                 };
 
@@ -192,15 +196,15 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 var student = new StudentsTable
                 {
                     AdmissionNumber = admissionNumber,
-                    FirstName  = input.FirstName,
-                    Surname    = input.Surname,
-                    OtherName  = input.OtherName,
-                    Gender     = (ConstantEnums.Gender)input.Gender,
+                    FirstName = input.FirstName,
+                    Surname = input.Surname,
+                    OtherName = input.OtherName,
+                    Gender = (ConstantEnums.Gender)input.Gender,
                     DateOfBirth = input.DateOfBirth,
                     Nationality = input.Nationality,
-                    State      = input.State,
-                    LocalGov   = input.LocalGov,
-                    Address    = input.Address,
+                    State = input.State,
+                    LocalGov = input.LocalGov,
+                    Address = input.Address,
                     PicturePath = input.PicturePath,
                     ApplicationUserId = user.Id
                 };
@@ -233,22 +237,22 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 if (student == null)
                     return new ApiResponse<StudentsTable> { Success = false, Message = "Student not found" };
 
-                student.FirstName   = input.FirstName;
-                student.Surname     = input.Surname;
-                student.OtherName   = input.OtherName;
-                student.Gender      = (ConstantEnums.Gender)input.Gender;
+                student.FirstName = input.FirstName;
+                student.Surname = input.Surname;
+                student.OtherName = input.OtherName;
+                student.Gender = (ConstantEnums.Gender)input.Gender;
                 student.DateOfBirth = input.DateOfBirth;
                 student.Nationality = input.Nationality;
-                student.State       = input.State;
-                student.LocalGov    = input.LocalGov;
-                student.Address     = input.Address;
+                student.State = input.State;
+                student.LocalGov = input.LocalGov;
+                student.Address = input.Address;
 
                 if (!string.IsNullOrEmpty(input.PicturePath))
                     student.PicturePath = input.PicturePath;
 
                 if (student.ApplicationUser != null)
                 {
-                    student.ApplicationUser.FullName    = $"{input.FirstName} {input.Surname}";
+                    student.ApplicationUser.FullName = $"{input.FirstName} {input.Surname}";
                     student.ApplicationUser.UpdatedDate = DateTime.UtcNow;
                 }
 
