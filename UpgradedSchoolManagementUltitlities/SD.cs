@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace UpgradedSchoolManagementUltitlities
 {
@@ -63,18 +64,21 @@ namespace UpgradedSchoolManagementUltitlities
             return Money.Replace('$', naira);
         }
 
+        private const string ReferenceAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
         /// <summary>
         /// Generates a unique payment reference number.
-        /// Format: yyyyMMddHHmm + 3 random uppercase letters.
+        /// Format: yyyyMMddHHmmssfff + 10 random uppercase letters/digits.
+        /// Uses a cryptographically secure random generator (thread-safe) so that every
+        /// call yields a distinct reference. Paystack requires one unique reference per
+        /// payment request — this reference is never reused for another transaction.
         /// </summary>
         public static string GenerateUniqueNumber()
         {
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmm");
-            var random = new Random();
-            var letters = new char[3];
-            for (int i = 0; i < 3; i++)
-                letters[i] = (char)('A' + random.Next(26));
-            return timestamp + new string(letters);
+            var suffix = new char[10];
+            for (int i = 0; i < suffix.Length; i++)
+                suffix[i] = ReferenceAlphabet[RandomNumberGenerator.GetInt32(ReferenceAlphabet.Length)];
+            return $"{DateTime.UtcNow:yyyyMMddHHmmssfff}{new string(suffix)}";
         }
 
         public static (string Grade, string Remark) GetGradeAndRemark(decimal totalScore)

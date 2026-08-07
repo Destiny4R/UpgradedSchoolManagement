@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -44,6 +44,28 @@ namespace UpgradedSchoolManagementModels.Models
         {
             ChargeSuccess = 1,
             TransferSuccess = 2
+        }
+
+        /// <summary>
+        /// The payment provider used to attempt a transaction (Paystack, Flutterwave, ...).
+        /// </summary>
+        public enum PaymentProvider
+        {
+            Paystack = 1,
+            Flutterwave = 2
+        }
+
+        /// <summary>
+        /// Lifecycle of a single payment transaction attempt.
+        /// Only a Successful transaction marks the related StudentPayment as paid.
+        /// </summary>
+        public enum PaymentTransactionStatus
+        {
+            Pending = 1,
+            Successful = 3,
+            Failed = 4,
+            Cancelled = 5,
+            Expired = 6
         }
 
         public enum ResultType

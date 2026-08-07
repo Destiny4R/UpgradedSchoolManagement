@@ -31,6 +31,7 @@ namespace UpgradedSchoolManagementDataAccess.Data
         public DbSet<PaymentSetup> PaymentSetups { get; set; }
         public DbSet<StudentPayment> StudentPayments { get; set; }
         public DbSet<StudentPaymentItem> StudentPaymentItems { get; set; }
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<AppSettings> Appsettings { get; set; }
         public DbSet<TermGeneralInformation> TermGeneralInformations { get; set; }
         public DbSet<ClassTermInformation> ClassTermInformations { get; set; }
@@ -213,6 +214,25 @@ namespace UpgradedSchoolManagementDataAccess.Data
                 .WithMany()
                 .HasForeignKey(spi => spi.PaymentItemId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // PaymentTransaction → StudentPayment (Cascade delete)
+            modelBuilder.Entity<PaymentTransaction>(entity =>
+            {
+                entity.HasOne(pt => pt.StudentPayment)
+                    .WithMany(sp => sp.PaymentTransactions)
+                    .HasForeignKey(pt => pt.StudentPaymentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Enforces one unique Paystack/Flutterwave reference per payment attempt.
+                entity.HasIndex(pt => pt.Reference).IsUnique();
+
+                entity.Property(pt => pt.Reference)
+                    .IsRequired()
+                    .HasMaxLength(120);
+
+                entity.Property(pt => pt.ProviderTransactionId)
+                    .HasMaxLength(120);
+            });
 
             modelBuilder.Entity<ClassResultSkill>()
                 .HasOne(crs => crs.SchoolClass)

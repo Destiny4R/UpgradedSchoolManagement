@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace UpgradedSchoolManagementDataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigrations : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -148,6 +148,26 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "PaymentCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "varchar(300)", maxLength: 300, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentCategories", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Permissions",
                 columns: table => new
                 {
@@ -171,6 +191,26 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "ResultSkills",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Domain = table.Column<int>(type: "int", nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ResultSkills", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "SchoolClasses",
                 columns: table => new
                 {
@@ -180,6 +220,7 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     DisplayOrder = table.Column<int>(type: "int", nullable: false),
+                    Resulttype = table.Column<int>(type: "int", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
                 },
@@ -222,22 +263,6 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SubClassTables", x => x.Id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "SubjectsTable",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    Name = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SubjectsTable", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -397,28 +422,17 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    FirstName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Surname = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    OtherName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
+                    FullName = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Gender = table.Column<int>(type: "int", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    EmployeeType = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                    EmployeeType = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    State = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    LocalGov = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Address = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    PicturePath = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: true)
+                    Address = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     EmployeeCode = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    HireDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    TerminationDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true),
                     IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     ApplicationUserId = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
@@ -477,6 +491,33 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "PaymentItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "varchar(300)", maxLength: 300, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentItems_PaymentCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "PaymentCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "RolePermissions",
                 columns: table => new
                 {
@@ -529,38 +570,166 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "ClassSubjects",
+                name: "ClassResultSkills",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    ClassId = table.Column<int>(type: "int", nullable: false),
-                    SubjectId = table.Column<int>(type: "int", nullable: false),
-                    SubClassId = table.Column<int>(type: "int", nullable: true),
+                    SchoolClassId = table.Column<int>(type: "int", nullable: false),
+                    ResultSkillId = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClassResultSkills", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ClassResultSkills_ResultSkills_ResultSkillId",
+                        column: x => x.ResultSkillId,
+                        principalTable: "ResultSkills",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ClassResultSkills_SchoolClasses_SchoolClassId",
+                        column: x => x.SchoolClassId,
+                        principalTable: "SchoolClasses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "TermGeneralInformations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Term = table.Column<int>(type: "int", nullable: false),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    DaySchoolOpen = table.Column<int>(type: "int", nullable: false),
+                    PrincipalName = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NextTermStart = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    NextTermEnd = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ClassSubjects", x => x.Id);
+                    table.PrimaryKey("PK_TermGeneralInformations", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ClassSubjects_SchoolClasses_ClassId",
-                        column: x => x.ClassId,
+                        name: "FK_TermGeneralInformations_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TermGeneralInformations_SesseionTables_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "SesseionTables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Appsettings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Term = table.Column<int>(type: "int", nullable: true),
+                    SchoolClassId = table.Column<int>(type: "int", nullable: true),
+                    SubClassId = table.Column<int>(type: "int", nullable: true),
+                    SessionId = table.Column<int>(type: "int", nullable: true),
+                    PrincipalName = table.Column<string>(type: "nvarchar(100)", nullable: true),
+                    PrincipalSignature = table.Column<string>(type: "nvarchar(256)", nullable: true),
+                    CashierName = table.Column<string>(type: "nvarchar(100)", nullable: true),
+                    CashierSignature = table.Column<string>(type: "nvarchar(256)", nullable: true),
+                    ApplicationUserId = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsAdmin = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CanPrintResult = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    PaystackSecretKey = table.Column<string>(type: "nvarchar(255)", nullable: true),
+                    PaystackPublicKey = table.Column<string>(type: "nvarchar(255)", nullable: true),
+                    EnableOnlinePayment = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Appsettings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Appsettings_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Appsettings_SchoolClasses_SchoolClassId",
+                        column: x => x.SchoolClassId,
+                        principalTable: "SchoolClasses",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Appsettings_SesseionTables_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "SesseionTables",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Appsettings_SubClassTables_SubClassId",
+                        column: x => x.SubClassId,
+                        principalTable: "SubClassTables",
+                        principalColumn: "Id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ClassTermInformations",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Term = table.Column<int>(type: "int", nullable: false),
+                    SchoolClassId = table.Column<int>(type: "int", nullable: false),
+                    SubClassId = table.Column<int>(type: "int", nullable: false),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    NextTermFees = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    ClassTeacherName = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ApplicationUserId = table.Column<string>(type: "varchar(450)", maxLength: 450, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClassTermInformations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ClassTermInformations_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ClassTermInformations_SchoolClasses_SchoolClassId",
+                        column: x => x.SchoolClassId,
                         principalTable: "SchoolClasses",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ClassSubjects_SubClassTables_SubClassId",
+                        name: "FK_ClassTermInformations_SesseionTables_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "SesseionTables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ClassTermInformations_SubClassTables_SubClassId",
                         column: x => x.SubClassId,
                         principalTable: "SubClassTables",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ClassSubjects_SubjectTables_SubjectId",
-                        column: x => x.SubjectId,
-                        principalTable: "SubjectTables",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -639,6 +808,46 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "PaymentSetups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    PaymentItemId = table.Column<int>(type: "int", nullable: false),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    Term = table.Column<int>(type: "int", nullable: false),
+                    SchoolClassId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    IsCompulsory = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentSetups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentSetups_PaymentItems_PaymentItemId",
+                        column: x => x.PaymentItemId,
+                        principalTable: "PaymentItems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PaymentSetups_SchoolClasses_SchoolClassId",
+                        column: x => x.SchoolClassId,
+                        principalTable: "SchoolClasses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PaymentSetups_SesseionTables_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "SesseionTables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "ResultTables",
                 columns: table => new
                 {
@@ -660,9 +869,9 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 {
                     table.PrimaryKey("PK_ResultTables", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ResultTables_SubjectsTable_SubjectId",
+                        name: "FK_ResultTables_SubjectTables_SubjectId",
                         column: x => x.SubjectId,
-                        principalTable: "SubjectsTable",
+                        principalTable: "SubjectTables",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -671,6 +880,48 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                         principalTable: "TermRegistrations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "StudentPayments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    TermRegId = table.Column<long>(type: "bigint", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    PaymentDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    Reference = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    State = table.Column<int>(type: "int", nullable: false),
+                    PaymentSource = table.Column<int>(type: "int", nullable: false),
+                    VerificationStatus = table.Column<int>(type: "int", nullable: false),
+                    PaystackReference = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    VerifiedBy = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    VerifiedAt = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    Narration = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RejectMessage = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    EvidenceFilePath = table.Column<string>(type: "varchar(420)", maxLength: 420, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RecordedBy = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudentPayments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudentPayments_TermRegistrations_TermRegId",
+                        column: x => x.TermRegId,
+                        principalTable: "TermRegistrations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -723,6 +974,121 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
+            migrationBuilder.CreateTable(
+                name: "StudentResultSkillRatings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    TermRegId = table.Column<long>(type: "bigint", nullable: false),
+                    ResultSkillId = table.Column<int>(type: "int", nullable: false),
+                    Score = table.Column<byte>(type: "tinyint unsigned", nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudentResultSkillRatings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudentResultSkillRatings_ResultSkills_ResultSkillId",
+                        column: x => x.ResultSkillId,
+                        principalTable: "ResultSkills",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StudentResultSkillRatings_TermRegistrations_TermRegId",
+                        column: x => x.TermRegId,
+                        principalTable: "TermRegistrations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "PaymentTransactions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    StudentPaymentId = table.Column<int>(type: "int", nullable: false),
+                    Reference = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Amount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    Provider = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ProviderTransactionId = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    PaidAt = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    Narration = table.Column<string>(type: "varchar(120)", maxLength: 120, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RecordedBy = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    FailReason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentTransactions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentTransactions_StudentPayments_StudentPaymentId",
+                        column: x => x.StudentPaymentId,
+                        principalTable: "StudentPayments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "StudentPaymentItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    StudentPaymentId = table.Column<int>(type: "int", nullable: false),
+                    PaymentItemId = table.Column<int>(type: "int", nullable: false),
+                    AmountPaid = table.Column<decimal>(type: "decimal(65,30)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudentPaymentItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudentPaymentItems_PaymentItems_PaymentItemId",
+                        column: x => x.PaymentItemId,
+                        principalTable: "PaymentItems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StudentPaymentItems_StudentPayments_StudentPaymentId",
+                        column: x => x.StudentPaymentId,
+                        principalTable: "StudentPayments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appsettings_ApplicationUserId",
+                table: "Appsettings",
+                column: "ApplicationUserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appsettings_SchoolClassId",
+                table: "Appsettings",
+                column: "SchoolClassId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appsettings_SessionId",
+                table: "Appsettings",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Appsettings_SubClassId",
+                table: "Appsettings",
+                column: "SubClassId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -766,19 +1132,35 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 column: "SchoolClassId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ClassSubjects_ClassId",
-                table: "ClassSubjects",
-                column: "ClassId");
+                name: "IX_ClassResultSkills_ResultSkillId",
+                table: "ClassResultSkills",
+                column: "ResultSkillId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ClassSubjects_SubClassId",
-                table: "ClassSubjects",
+                name: "IX_ClassResultSkills_SchoolClassId_ResultSkillId",
+                table: "ClassResultSkills",
+                columns: new[] { "SchoolClassId", "ResultSkillId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassTermInformations_ApplicationUserId",
+                table: "ClassTermInformations",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassTermInformations_SchoolClassId",
+                table: "ClassTermInformations",
+                column: "SchoolClassId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassTermInformations_SessionId",
+                table: "ClassTermInformations",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassTermInformations_SubClassId",
+                table: "ClassTermInformations",
                 column: "SubClassId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ClassSubjects_SubjectId",
-                table: "ClassSubjects",
-                column: "SubjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EmployeeTables_ApplicationUserId",
@@ -797,6 +1179,38 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 table: "ParentGuardians",
                 column: "Phone2",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentItems_CategoryId",
+                table: "PaymentItems",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSetups_PaymentItemId_SessionId_Term_SchoolClassId",
+                table: "PaymentSetups",
+                columns: new[] { "PaymentItemId", "SessionId", "Term", "SchoolClassId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSetups_SchoolClassId",
+                table: "PaymentSetups",
+                column: "SchoolClassId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSetups_SessionId",
+                table: "PaymentSetups",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentTransactions_Reference",
+                table: "PaymentTransactions",
+                column: "Reference",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentTransactions_StudentPaymentId",
+                table: "PaymentTransactions",
+                column: "StudentPaymentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Permissions_Code",
@@ -836,9 +1250,35 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_StudentPaymentItems_PaymentItemId",
+                table: "StudentPaymentItems",
+                column: "PaymentItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudentPaymentItems_StudentPaymentId",
+                table: "StudentPaymentItems",
+                column: "StudentPaymentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudentPayments_TermRegId",
+                table: "StudentPayments",
+                column: "TermRegId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StudentRatings_TermRegId",
                 table: "StudentRatings",
                 column: "TermRegId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudentResultSkillRatings_ResultSkillId",
+                table: "StudentResultSkillRatings",
+                column: "ResultSkillId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudentResultSkillRatings_TermRegId_ResultSkillId",
+                table: "StudentResultSkillRatings",
+                columns: new[] { "TermRegId", "ResultSkillId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -846,6 +1286,16 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 table: "StudentsTables",
                 column: "ApplicationUserId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TermGeneralInformations_ApplicationUserId",
+                table: "TermGeneralInformations",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TermGeneralInformations_SessionId",
+                table: "TermGeneralInformations",
+                column: "SessionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TermRegistrations_SchoolClassId",
@@ -872,6 +1322,9 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Appsettings");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
@@ -893,10 +1346,19 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
-                name: "ClassSubjects");
+                name: "ClassResultSkills");
+
+            migrationBuilder.DropTable(
+                name: "ClassTermInformations");
 
             migrationBuilder.DropTable(
                 name: "EmployeeTables");
+
+            migrationBuilder.DropTable(
+                name: "PaymentSetups");
+
+            migrationBuilder.DropTable(
+                name: "PaymentTransactions");
 
             migrationBuilder.DropTable(
                 name: "ResultTables");
@@ -908,13 +1370,19 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                 name: "StudentParentLinks");
 
             migrationBuilder.DropTable(
+                name: "StudentPaymentItems");
+
+            migrationBuilder.DropTable(
                 name: "StudentRatings");
 
             migrationBuilder.DropTable(
-                name: "SubjectTables");
+                name: "StudentResultSkillRatings");
 
             migrationBuilder.DropTable(
-                name: "SubjectsTable");
+                name: "TermGeneralInformations");
+
+            migrationBuilder.DropTable(
+                name: "SubjectTables");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -924,6 +1392,18 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
 
             migrationBuilder.DropTable(
                 name: "ParentGuardians");
+
+            migrationBuilder.DropTable(
+                name: "PaymentItems");
+
+            migrationBuilder.DropTable(
+                name: "StudentPayments");
+
+            migrationBuilder.DropTable(
+                name: "ResultSkills");
+
+            migrationBuilder.DropTable(
+                name: "PaymentCategories");
 
             migrationBuilder.DropTable(
                 name: "TermRegistrations");

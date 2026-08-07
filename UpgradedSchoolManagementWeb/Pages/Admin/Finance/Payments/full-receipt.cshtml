@@ -187,7 +187,11 @@
 @if (r != null)
 {
     <div class="no-print">
-        <a href="/Admin/Finance/Payments/Index" class="btn-back">&larr; Back to Payments</a>
+        @if(User.IsInRole("Student")){
+            <a href="/student/payment-history" class="btn-back">&larr; Back to Payments</a>
+        }else{
+            <a href="/Admin/Finance/Payments/Index" class="btn-back">&larr; Back to Payments</a>
+        }
         <button class="btn-print" onclick="window.print()">Print Receipt</button>
     </div>
 

@@ -65,28 +65,8 @@ namespace UpgradedSchoolManagementWeb.Controllers
                 if (string.IsNullOrEmpty(reference))
                     return Ok(new { status = true });
 
-                var verification = new PaystackVerificationResult
-                {
-                    Reference = reference,
-                    Currency = data.TryGetProperty("currency", out var cur) ? cur.GetString() : "NGN"
-                };
-
-                if (eventName.Equals("charge.success", StringComparison.OrdinalIgnoreCase))
-                {
-                    verification.Success = true;
-                    verification.Status = data.TryGetProperty("status", out var st) ? st.GetString() : "success";
-                    if (data.TryGetProperty("amount", out var amountEl) && amountEl.TryGetInt64(out var amountKobo))
-                        verification.Amount = amountKobo / 100m;
-                    if (data.TryGetProperty("paid_at", out var paidAt) && DateTime.TryParse(paidAt.GetString(), out var paidDate))
-                        verification.PaidAt = paidDate.ToUniversalTime();
-                }
-                else
-                {
-                    verification.Success = false;
-                    verification.Status = "failed";
-                }
-
-                var result = await _studentPaymentService.ApplyPaystackVerificationAsync(reference, verification);
+                // Perform server-side API verification with Paystack directly using the transaction reference
+                var result = await _studentPaymentService.ConfirmOnlinePaymentAsync(reference, "Paystack Webhook");
 
                 if (result.Success)
                 {

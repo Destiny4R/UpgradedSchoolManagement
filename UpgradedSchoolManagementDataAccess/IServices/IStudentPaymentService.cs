@@ -83,15 +83,25 @@ namespace UpgradedSchoolManagementDataAccess.IServices
 
         /// <summary>
         /// Applies a Paystack verification result to a payment (called from the
-        /// webhook and the callback page). Idempotent — only transitions Pending payments.
+        /// webhook and inline JS popup completion). Idempotent — transitions payment
+        /// to Completed status and Approved state.
         /// </summary>
-        Task<ApiResponse<bool>> ApplyPaystackVerificationAsync(string reference, PaystackVerificationResult verification);
+        Task<ApiResponse<bool>> ApplyPaystackVerificationAsync(string reference, PaystackVerificationResult verification, string? verifiedBy = null);
 
         /// <summary>
         /// Confirms an online payment by re-verifying with Paystack (used on the
         /// student callback page so the UI updates without waiting for the webhook).
         /// </summary>
         Task<ApiResponse<bool>> ConfirmOnlinePaymentAsync(string reference, string? confirmedBy);
+
+        /// <summary>
+        /// Cancels a pending online payment attempt (e.g. the student closed the
+        /// Paystack popup or the attempt was abandoned). Marks the transaction Cancelled and
+        /// leaves the StudentPayment unpaid so the student can retry immediately. Idempotent —
+        /// a successful/verified transaction is never cancelled. A later provider success
+        /// still honours the charge because the provider is the source of truth.
+        /// </summary>
+        Task<ApiResponse<bool>> CancelOnlinePaymentAsync(string reference, string? cancelledBy);
 
         /// <summary>
         /// Marks a successful online payment as Verified (admin action).

@@ -408,6 +408,17 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public string Reference { get; set; } = string.Empty;
         public string AuthorizationUrl { get; set; } = string.Empty;
         public decimal Amount { get; set; }
+        public string PublicKey { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request model for confirming online payment after inline Paystack JS popup succeeds.
+    /// </summary>
+    public class ConfirmOnlinePaymentRequest
+    {
+        [Required]
+        public string Reference { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -453,6 +464,7 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public string Currency { get; set; } = string.Empty;
         public string? CustomerEmail { get; set; }
         public DateTime? PaidAt { get; set; }
+        public string? ProviderTransactionId { get; set; }
         public string? Message { get; set; }
     }
 }

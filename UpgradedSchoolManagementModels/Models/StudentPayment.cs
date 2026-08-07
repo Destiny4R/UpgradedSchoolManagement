@@ -21,7 +21,12 @@ namespace UpgradedSchoolManagementModels.Models
 
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
 
-        public string Reference { get; set; }
+        /// <summary>
+        /// Final reference for a completed payment. Null while the payment is only an
+        /// in-progress attempt — it is populated from the successful PaymentTransaction
+        /// only after the provider has verified the payment.
+        /// </summary>
+        public string? Reference { get; set; }
 
         public PaymentStatus Status { get; set; } = PaymentStatus.Completed;
 
@@ -58,5 +63,11 @@ namespace UpgradedSchoolManagementModels.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<StudentPaymentItem> PaymentItems { get; set; }
+
+        /// <summary>
+        /// Every payment attempt (successful, failed, cancelled, abandoned) made
+        /// against this payment. Only one successful transaction marks it as paid.
+        /// </summary>
+        public ICollection<PaymentTransaction> PaymentTransactions { get; set; }
     }
 }

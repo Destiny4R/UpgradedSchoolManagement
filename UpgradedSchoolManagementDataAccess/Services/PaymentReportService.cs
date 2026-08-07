@@ -732,7 +732,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 .Select(sp => new RecentPaymentItem
                 {
                     Id = sp.Id,
-                    Reference = sp.Reference,
+                    Reference = sp.Reference ?? "",
                     StudentName = sp.TermRegistration.StudentsTable.Surname + " " + sp.TermRegistration.StudentsTable.FirstName,
                     ClassName = sp.TermRegistration.SchoolClasses.Name,
                     TotalAmount = sp.TotalAmount,

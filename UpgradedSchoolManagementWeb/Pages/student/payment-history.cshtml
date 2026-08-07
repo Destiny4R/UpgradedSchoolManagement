@@ -24,6 +24,7 @@
                 <table id="paymentsTable" class="table w-100">
                     <thead>
                         <tr>
+                            <td>#</td>
                             <th>Reference</th>
                             <th>Session</th>
                             <th>Term</th>
@@ -50,6 +51,7 @@
             $('#paymentsTable').DataTable({
                 processing: true,
                 serverSide: true,
+                responsive:true,
                 ajax: {
                     url: '/Home/GetMyPayments',
                     type: 'POST',
@@ -57,19 +59,25 @@
                     data: function (d) { return JSON.stringify(d); }
                 },
                 columns: [
-                    { data: 'reference', width: '140px' },
-                    { data: 'session', width: '100px' },
-                    { data: 'term', width: '90px' },
                     {
-                        data: 'itemNames', width: '200px',
+                        "data": null,
+                        render: function (data, type, row, meta) {
+                            return meta.row + meta.settings._iDisplayStart + 1;
+                        }
+                    },
+                    { data: 'reference', "autoWidth": true  },
+                    { data: 'session', "autoWidth": true  },
+                    { data: 'term', "autoWidth": true },
+                    {
+                        data: 'itemNames', "autoWidth": true ,
                         render: function (d) { return d && d.length ? d.join(', ') : '—'; }
                     },
                     {
-                        data: 'totalAmount', width: '100px',
+                        data: 'totalAmount', "autoWidth": true ,
                         render: function (d) { return '₦' + Number(d).toLocaleString(undefined, { minimumFractionDigits: 2 }); }
                     },
                     {
-                        data: 'paymentSource', width: '130px', className: 'text-center',
+                        data: 'paymentSource', "autoWidth": true , className: 'text-center',
                         render: function (d) {
                             if (d && d.indexOf('Online') !== -1) {
                                 return '<span class="badge bg-info text-dark">Online (Paystack)</span>';
@@ -78,14 +86,14 @@
                         }
                     },
                     {
-                        data: 'status', width: '90px', className: 'text-center',
+                        data: 'status', "autoWidth": true , className: 'text-center',
                         render: function (d) {
                             var map = { Completed: 'success', Pending: 'warning text-dark', Failed: 'danger', Reversed: 'secondary' };
                             return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';
                         }
                     },
                     {
-                        data: 'state', width: '90px', className: 'text-center',
+                        data: 'state', "autoWidth": true , className: 'text-center',
                         render: function (d) {
                             var map = { Approved: 'success', Pending: 'warning text-dark', Rejected: 'danger', Cancelled: 'secondary' };
                             return '<span class="badge bg-' + (map[d] || 'secondary') + '">' + d + '</span>';

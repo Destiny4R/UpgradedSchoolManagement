@@ -1012,6 +1012,50 @@ namespace UpgradedSchoolManagementWeb.Controllers
         }
 
         [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> ConfirmOnlinePayment([FromBody] ConfirmOnlinePaymentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Reference))
+                return Json(new { success = false, message = "Payment reference is required." });
+
+            var username = User.Identity?.Name;
+            var result = await _studentPaymentService.ConfirmOnlinePaymentAsync(request.Reference, username);
+
+            if (result.Success)
+            {
+                await _auditLogService.LogAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                    username ?? "",
+                    "ONLINE_PAYMENT_INLINE_CONFIRM", "Payments",
+                    $"Inline Paystack payment confirmed for reference {request.Reference}.");
+            }
+
+            return Json(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CancelOnlinePayment([FromBody] ConfirmOnlinePaymentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Reference))
+                return Json(new { success = false, message = "Payment reference is required." });
+
+            var username = User.Identity?.Name;
+            var result = await _studentPaymentService.CancelOnlinePaymentAsync(request.Reference, username);
+
+            if (result.Success)
+            {
+                await _auditLogService.LogAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+                    username ?? "",
+                    "ONLINE_PAYMENT_CANCELLED", "Payments",
+                    $"Online payment attempt cancelled for reference {request.Reference}.");
+            }
+
+            return Json(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost]
         [Authorize(Policy = "Finance.View")]
         public async Task<IActionResult> GetOnlinePayments([FromBody] OnlinePaymentsDataTablesRequest request)
         {

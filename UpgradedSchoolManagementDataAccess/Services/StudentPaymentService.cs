@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,11 +18,20 @@ namespace UpgradedSchoolManagementDataAccess.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IPaystackPaymentService _paystackService;
+        private readonly SchoolConfigurationSetup _config;
 
-        public StudentPaymentService(ApplicationDbContext context, IPaystackPaymentService paystackService)
+        /// <summary>
+        /// How long a pending online payment attempt may sit before it is considered
+        /// abandoned and allowed to be replaced by a new attempt. Paystack itself expires
+        /// transactions after 1 hour, so 30 minutes is a safe local timeout.
+        /// </summary>
+        private const int OnlineAttemptTimeoutMinutes = 30;
+
+        public StudentPaymentService(ApplicationDbContext context, IPaystackPaymentService paystackService, IOptions<SchoolConfigurationSetup> configOptions)
         {
             _context = context;
             _paystackService = paystackService;
+            _config = configOptions.Value;
         }
 
         private static string GetTermName(Term term)
@@ -142,8 +152,11 @@ namespace UpgradedSchoolManagementDataAccess.Services
                                            && t.Term == currentTerm
                                            && t.SchoolClassId == classId);
                 if (termReg == null)
-                    return new ApiResponse<MakePaymentPageViewModel> { Success = false,
-                        Message = $"Student '{student.FullName}' is not registered for {termName} in {sessionName} for the selected class." };
+                    return new ApiResponse<MakePaymentPageViewModel>
+                    {
+                        Success = false,
+                        Message = $"Student '{student.FullName}' is not registered for {termName} in {sessionName} for the selected class."
+                    };
 
                 // Check if payment setup exists for the selected category in this class/session/term
                 var paymentSetups = await _context.PaymentSetups
@@ -159,8 +172,11 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     .ToListAsync();
 
                 if (!paymentSetups.Any())
-                    return new ApiResponse<MakePaymentPageViewModel> { Success = false,
-                        Message = "No payment items are configured for the selected category in this class/session/term." };
+                    return new ApiResponse<MakePaymentPageViewModel>
+                    {
+                        Success = false,
+                        Message = "No payment items are configured for the selected category in this class/session/term."
+                    };
 
                 // Get already paid amounts for this student in this term registration
                 var alreadyPaidAmounts = await _context.StudentPaymentItems
@@ -259,12 +275,14 @@ namespace UpgradedSchoolManagementDataAccess.Services
                         return new ApiResponse<int> { Success = false, Message = $"Overpayment detected for item. Expected: {expected}, Already Paid: {alreadyPaid}, Attempting: {item.AmountPaid}" };
                 }
 
+                var paymentReference = await GenerateUniquePaymentReferenceAsync();
+
                 var payment = new StudentPayment
                 {
                     TermRegId = model.TermRegistrationId,
                     TotalAmount = model.Items.Sum(i => i.AmountPaid),
                     PaymentDate = DateTime.UtcNow,
-                    Reference = SD.GenerateUniqueNumber(),
+                    Reference = paymentReference,
                     Status = PaymentStatus.Completed,
                     State = PaymentState.Pending,
                     PaymentSource = PaymentSource.Manual,
@@ -307,7 +325,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     TermRegId = payment.TermRegId,
                     SessionId = payment.TermRegistration?.SessionId ?? 0,
                     Term = (int)(payment.TermRegistration?.Term ?? Term.First),
-                    Reference = payment.Reference,
+                    Reference = payment.Reference ?? "",
                     StudentName = payment.TermRegistration?.StudentsTable?.FullName ?? "Unknown",
                     AdmissionNo = payment.TermRegistration?.StudentsTable?.ApplicationUser?.UserName ?? "N/A",
                     ClassName = payment.TermRegistration?.SchoolClasses?.Name ?? "Unknown",
@@ -542,7 +560,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 .Select(p => new PendingPaymentNotification
                 {
                     PaymentId = p.Id,
-                    Reference = p.Reference,
+                    Reference = p.Reference ?? "",
                     StudentName = p.TermRegistration.StudentsTable.Surname + " " + p.TermRegistration.StudentsTable.FirstName,
                     ClassName = p.TermRegistration.SchoolClasses.Name,
                     Amount = p.TotalAmount,
@@ -694,45 +712,45 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     runningBalance -= spi.AmountPaid;
                     history.Add(new PaymentHistoryRow
                     {
-                        PaymentId    = spi.StudentPaymentId,
-                        Reference    = spi.StudentPayment.Reference,
-                        PaymentDate  = spi.StudentPayment.PaymentDate,
-                        AmountPaid   = spi.AmountPaid,
-                        RecordedBy   = spi.StudentPayment.RecordedBy,
-                        State        = spi.StudentPayment.State.ToString(),
-                        Status       = spi.StudentPayment.Status.ToString(),
+                        PaymentId = spi.StudentPaymentId,
+                        Reference = spi.StudentPayment.Reference ?? "",
+                        PaymentDate = spi.StudentPayment.PaymentDate,
+                        AmountPaid = spi.AmountPaid,
+                        RecordedBy = spi.StudentPayment.RecordedBy,
+                        State = spi.StudentPayment.State.ToString(),
+                        Status = spi.StudentPayment.Status.ToString(),
                         PaymentSource = spi.StudentPayment.PaymentSource == PaymentSource.Online ? "Online (Paystack)" : "Recorded Manually (System User)",
                         RunningBalance = runningBalance < 0 ? 0 : runningBalance
                     });
                 }
 
                 // 6. Build balance summary
-                var totalPaid  = paymentItems.Sum(spi => spi.AmountPaid);
+                var totalPaid = paymentItems.Sum(spi => spi.AmountPaid);
                 var outstanding = setup.Amount - totalPaid;
                 if (outstanding < 0) outstanding = 0;
 
                 var statusLabel = outstanding <= 0 ? "Fully Paid"
-                                : totalPaid > 0   ? "Partially Paid"
-                                :                   "Unpaid";
+                                : totalPaid > 0 ? "Partially Paid"
+                                : "Unpaid";
 
                 var result = new SingleItemLookupResult
                 {
                     TermRegistrationId = (int)termReg.Id,
-                    StudentId          = student.Id,
-                    StudentName        = student.FullName,
-                    AdmissionNo        = student.ApplicationUser?.UserName ?? admissionNo,
-                    ClassName          = termReg.SchoolClasses?.Name ?? "Unknown",
-                    SessionName        = termReg.SesseionTable?.Name ?? "Unknown",
-                    TermName           = GetTermName(term),
-                    PaymentItemId      = paymentItemId,
-                    ItemName           = setup.PaymentItem.Name,
-                    CategoryName       = setup.PaymentItem.PaymentCategory?.Name ?? "Unknown",
-                    IsCompulsory       = setup.IsCompulsory,
+                    StudentId = student.Id,
+                    StudentName = student.FullName,
+                    AdmissionNo = student.ApplicationUser?.UserName ?? admissionNo,
+                    ClassName = termReg.SchoolClasses?.Name ?? "Unknown",
+                    SessionName = termReg.SesseionTable?.Name ?? "Unknown",
+                    TermName = GetTermName(term),
+                    PaymentItemId = paymentItemId,
+                    ItemName = setup.PaymentItem.Name,
+                    CategoryName = setup.PaymentItem.PaymentCategory?.Name ?? "Unknown",
+                    IsCompulsory = setup.IsCompulsory,
                     Balance = new ItemBalanceSummary
                     {
-                        TotalDue           = setup.Amount,
-                        TotalPaid          = totalPaid,
-                        Outstanding        = outstanding,
+                        TotalDue = setup.Amount,
+                        TotalPaid = totalPaid,
+                        Outstanding = outstanding,
                         PaymentStatusLabel = statusLabel
                     },
                     History = history
@@ -742,7 +760,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 {
                     Success = true,
                     Message = "Student found. Payment details loaded.",
-                    Data    = result
+                    Data = result
                 };
             }
             catch (Exception ex)
@@ -770,8 +788,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 var setup = await _context.PaymentSetups
                     .FirstOrDefaultAsync(ps =>
                         ps.PaymentItemId == model.PaymentItemId &&
-                        ps.SessionId    == termReg.SessionId &&
-                        ps.Term         == termReg.Term &&
+                        ps.SessionId == termReg.SessionId &&
+                        ps.Term == termReg.Term &&
                         ps.SchoolClassId == termReg.SchoolClassId &&
                         ps.IsActive);
                 if (setup == null)
@@ -791,8 +809,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
                         spi.StudentPayment.TermRegId == model.TermRegistrationId &&
                         spi.StudentPayment.Status != PaymentStatus.Reversed &&
                         spi.StudentPayment.Status != PaymentStatus.Failed &&
-                        spi.StudentPayment.State  != PaymentState.Rejected &&
-                        spi.StudentPayment.State  != PaymentState.Cancelled)
+                        spi.StudentPayment.State != PaymentState.Rejected &&
+                        spi.StudentPayment.State != PaymentState.Cancelled)
                     .SumAsync(spi => (decimal?)spi.AmountPaid) ?? 0;
 
                 var maxAllowed = setup.Amount - alreadyPaid;
@@ -805,18 +823,20 @@ namespace UpgradedSchoolManagementDataAccess.Services
                                   $"Maximum you can pay now: ₦{maxAllowed:N2}."
                     };
 
+                var paymentReference = await GenerateUniquePaymentReferenceAsync();
+
                 var payment = new StudentPayment
                 {
-                    TermRegId    = model.TermRegistrationId,
-                    TotalAmount  = model.AmountPaid,
-                    PaymentDate  = DateTime.UtcNow,
-                    Reference    = SD.GenerateUniqueNumber(),
-                    Status       = PaymentStatus.Completed,
-                    State        = PaymentState.Pending,
+                    TermRegId = model.TermRegistrationId,
+                    TotalAmount = model.AmountPaid,
+                    PaymentDate = DateTime.UtcNow,
+                    Reference = paymentReference,
+                    Status = PaymentStatus.Completed,
+                    State = PaymentState.Pending,
                     PaymentSource = PaymentSource.Manual,
-                    Narration    = model.Narration,
-                    RecordedBy   = recordedBy,
-                    UpdatedAt    = DateTime.UtcNow,
+                    Narration = model.Narration,
+                    RecordedBy = recordedBy,
+                    UpdatedAt = DateTime.UtcNow,
                     PaymentItems = new List<StudentPaymentItem>
                     {
                         new StudentPaymentItem
@@ -834,7 +854,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 {
                     Success = true,
                     Message = $"Payment of ₦{model.AmountPaid:N2} recorded successfully. Reference: {payment.Reference}.",
-                    Data    = payment.Id
+                    Data = payment.Id
                 };
             }
             catch (Exception ex)
@@ -908,7 +928,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     .Select(g => g.First())
                     .Select(p => new ReceiptPaymentHistoryRow
                     {
-                        Reference = p.Reference,
+                        Reference = p.Reference ?? "",
                         Date = p.PaymentDate,
                         Amount = p.TotalAmount,
                         Status = p.State == PaymentState.Pending
@@ -975,8 +995,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 var setup = await _context.PaymentSetups
                     .FirstOrDefaultAsync(ps =>
                         ps.PaymentItemId == item.PaymentItemId &&
-                        ps.SessionId     == payment.TermRegistration.SessionId &&
-                        ps.Term          == payment.TermRegistration.Term &&
+                        ps.SessionId == payment.TermRegistration.SessionId &&
+                        ps.Term == payment.TermRegistration.Term &&
                         ps.SchoolClassId == payment.TermRegistration.SchoolClassId &&
                         ps.IsActive);
 
@@ -990,13 +1010,13 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 // Amount paid by OTHER transactions (exclude this one)
                 var otherPaid = await _context.StudentPaymentItems
                     .Where(spi =>
-                        spi.PaymentItemId     == item.PaymentItemId &&
+                        spi.PaymentItemId == item.PaymentItemId &&
                         spi.StudentPayment.TermRegId == payment.TermRegId &&
-                        spi.StudentPaymentId  != payment.Id &&
+                        spi.StudentPaymentId != payment.Id &&
                         spi.StudentPayment.Status != PaymentStatus.Reversed &&
                         spi.StudentPayment.Status != PaymentStatus.Failed &&
-                        spi.StudentPayment.State  != PaymentState.Rejected &&
-                        spi.StudentPayment.State  != PaymentState.Cancelled)
+                        spi.StudentPayment.State != PaymentState.Rejected &&
+                        spi.StudentPayment.State != PaymentState.Cancelled)
                     .SumAsync(spi => (decimal?)spi.AmountPaid) ?? 0;
 
                 if (model.NewAmount <= 0)
@@ -1018,14 +1038,14 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     {
                         Success = true,
                         Message = "No changes detected. Payment is already up to date.",
-                        Data    = true
+                        Data = true
                     };
 
-                item.AmountPaid      = model.NewAmount;
-                payment.TotalAmount  = model.NewAmount;
-                payment.Narration    = model.Narration;
-                payment.UpdatedAt    = DateTime.UtcNow;
-                payment.RecordedBy   = updatedBy ?? payment.RecordedBy;
+                item.AmountPaid = model.NewAmount;
+                payment.TotalAmount = model.NewAmount;
+                payment.Narration = model.Narration;
+                payment.UpdatedAt = DateTime.UtcNow;
+                payment.RecordedBy = updatedBy ?? payment.RecordedBy;
 
                 await _context.SaveChangesAsync();
 
@@ -1033,7 +1053,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 {
                     Success = true,
                     Message = $"Payment updated to ₦{model.NewAmount:N2} successfully.",
-                    Data    = true
+                    Data = true
                 };
             }
             catch (Exception ex)
@@ -1083,7 +1103,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     {
                         Id = p.Id,
                         TermRegId = p.TermRegId,
-                        Reference = p.Reference,
+                        Reference = p.Reference ?? "",
                         TotalAmount = p.TotalAmount,
                         PaymentDate = p.PaymentDate,
                         Status = p.Status.ToString(),
@@ -1120,6 +1140,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
 
         // ── ONLINE PAYMENT (PAYSTACK) ────────────────────────────────────────────
 
+        // ── ONLINE PAYMENT (PAYSTACK) ────────────────────────────────────────────
+
         public async Task<List<PendingOnlinePaymentItemVM>> GetPendingPaymentsAsync(int termRegId)
         {
             var termReg = await _context.TermRegistrations
@@ -1152,14 +1174,6 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 .Select(g => new { PaymentItemId = g.Key, TotalPaid = g.Sum(x => x.AmountPaid) })
                 .ToDictionaryAsync(x => x.PaymentItemId, x => x.TotalPaid);
 
-            var pendingOnlineItems = await _context.StudentPaymentItems
-                .Where(spi => spi.StudentPayment.TermRegId == termRegId
-                           && spi.StudentPayment.PaymentSource == PaymentSource.Online
-                           && spi.StudentPayment.Status == PaymentStatus.Pending)
-                .Select(spi => spi.PaymentItemId)
-                .Distinct()
-                .ToListAsync();
-
             return paymentSetups.Select(ps => new PendingOnlinePaymentItemVM
             {
                 PaymentItemId = ps.PaymentItemId,
@@ -1168,7 +1182,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 ExpectedAmount = ps.Amount,
                 AlreadyPaid = alreadyPaidAmounts.ContainsKey(ps.PaymentItemId)
                     ? alreadyPaidAmounts[ps.PaymentItemId] : 0,
-                HasPendingOnlinePayment = pendingOnlineItems.Contains(ps.PaymentItemId)
+                HasPendingOnlinePayment = false
             }).ToList();
         }
 
@@ -1213,24 +1227,42 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 if (payAmount <= 0 || payAmount > maxAllowed)
                     return new ApiResponse<InitiateOnlinePaymentResponse> { Success = false, Message = $"Invalid amount. Maximum payable: ₦{maxAllowed:N2}." };
 
-                // Block duplicate in-flight online payments for the same item
-                var hasInFlight = await _context.StudentPayments
-                    .AnyAsync(p => p.TermRegId == termRegId &&
-                                   p.PaymentSource == PaymentSource.Online &&
-                                   p.Status == PaymentStatus.Pending &&
-                                   p.PaymentItems.Any(pi => pi.PaymentItemId == paymentItemId));
-                if (hasInFlight)
-                    return new ApiResponse<InitiateOnlinePaymentResponse> { Success = false, Message = "An online payment for this item is already awaiting confirmation." };
+                // Cancel/expire any existing unconfirmed Pending attempts for this item
+                // so a new attempt can be created cleanly with a brand-new unique reference.
+                var pendingAttempts = await _context.PaymentTransactions
+                    .Include(t => t.StudentPayment)
+                    .Where(t => t.StudentPayment.TermRegId == termRegId &&
+                                t.StudentPayment.PaymentItems.Any(pi => pi.PaymentItemId == paymentItemId) &&
+                                t.Status == PaymentTransactionStatus.Pending)
+                    .ToListAsync();
 
-                var reference = SD.GenerateUniqueNumber();
+                foreach (var pending in pendingAttempts)
+                {
+                    pending.Status = PaymentTransactionStatus.Cancelled;
+                    pending.FailReason = "Superseded by a new payment attempt.";
+                    pending.UpdatedAt = DateTime.UtcNow;
+                    if (pending.StudentPayment != null && pending.StudentPayment.Status == PaymentStatus.Pending)
+                    {
+                        pending.StudentPayment.Status = PaymentStatus.Failed;
+                        pending.StudentPayment.State = PaymentState.Cancelled;
+                        pending.StudentPayment.VerificationStatus = PaymentVerificationStatus.Failed;
+                        pending.StudentPayment.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+                if (pendingAttempts.Count > 0)
+                    await _context.SaveChangesAsync();
 
+                var reference = await GenerateUniquePaymentReferenceAsync();
+
+                // Create the StudentPayment shell first (no reference yet — the reference
+                // belongs to the PaymentTransaction until the provider confirms the charge).
                 var payment = new StudentPayment
                 {
                     TermRegId = termRegId,
                     TotalAmount = payAmount,
                     PaymentDate = DateTime.UtcNow,
-                    Reference = reference,
-                    PaystackReference = reference,
+                    Reference = null,
+                    PaystackReference = null,
                     Status = PaymentStatus.Pending,
                     State = PaymentState.Pending,
                     PaymentSource = PaymentSource.Online,
@@ -1244,20 +1276,46 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     }
                 };
 
-                var email = NormalizeEmailForPaystack(termReg.StudentsTable?.ApplicationUser?.Email ?? termReg.StudentsTable?.ApplicationUser?.UserName);
+                _context.StudentPayments.Add(payment);
+                await _context.SaveChangesAsync();
 
-                var init = await _paystackService.InitializeAsync(email, reference, payAmount, callbackUrl);
+                // Every attempt is recorded permanently as its own transaction, initialized with Pending status.
+                var transaction = new PaymentTransaction
+                {
+                    StudentPaymentId = payment.Id,
+                    Reference = reference,
+                    Amount = payAmount,
+                    Provider = PaymentProvider.Paystack,
+                    Status = PaymentTransactionStatus.Pending,
+                    Narration = "Online payment (Paystack)",
+                    RecordedBy = recordedBy,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.PaymentTransactions.Add(transaction);
+                await _context.SaveChangesAsync();
+
+                var email = NormalizeEmailForPaystack(termReg.StudentsTable?.ApplicationUser?.Email, termReg.StudentsTable?.ApplicationUser?.UserName);
+                var settings = await _paystackService.GetSettingsAsync();
+
+                var init = await _paystackService.InitializeAsync(_config.ContactEmail, reference, payAmount, callbackUrl);
                 if (!init.Success || string.IsNullOrWhiteSpace(init.AuthorizationUrl))
                 {
+                    transaction.Status = PaymentTransactionStatus.Failed;
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    transaction.FailReason = init.Message ?? "Could not initialize payment with Paystack.";
+                    payment.Status = PaymentStatus.Failed;
+                    payment.State = PaymentState.Cancelled;
+                    payment.VerificationStatus = PaymentVerificationStatus.Failed;
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+
                     return new ApiResponse<InitiateOnlinePaymentResponse>
                     {
                         Success = false,
                         Message = init.Message ?? "Could not initialize payment with Paystack."
                     };
                 }
-
-                _context.StudentPayments.Add(payment);
-                await _context.SaveChangesAsync();
 
                 return new ApiResponse<InitiateOnlinePaymentResponse>
                 {
@@ -1268,7 +1326,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
                         PaymentId = payment.Id,
                         Reference = reference,
                         AuthorizationUrl = init.AuthorizationUrl,
-                        Amount = payAmount
+                        Amount = payAmount,
+                        PublicKey = settings.PublicKey ?? string.Empty,
+                        Email = _config.ContactEmail
                     }
                 };
             }
@@ -1279,43 +1339,73 @@ namespace UpgradedSchoolManagementDataAccess.Services
         }
 
         public async Task<ApiResponse<bool>> ApplyPaystackVerificationAsync(
-            string reference, PaystackVerificationResult verification)
+            string reference, PaystackVerificationResult verification, string? verifiedBy = null)
         {
             try
             {
-                var payment = await _context.StudentPayments
-                    .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
-                if (payment == null)
-                    return new ApiResponse<bool> { Success = false, Message = "Payment not found for this reference." };
+                var transaction = await _context.PaymentTransactions
+                    .Include(t => t.StudentPayment)
+                    .FirstOrDefaultAsync(t => t.Reference == reference);
 
-                // Idempotency — only process once
-                if (payment.Status != PaymentStatus.Pending)
-                    return new ApiResponse<bool> { Success = true, Message = "Payment already processed.", Data = true };
+                // Rows created before PaymentTransaction existed carry the reference directly
+                // on StudentPayment — fall back to those so existing history works.
+                if (transaction == null)
+                    return await ApplyLegacyPaystackVerificationAsync(reference, verification, verifiedBy);
+
+                var payment = transaction.StudentPayment;
+
+                // Idempotency — a verified, successful transaction is never applied twice.
+                if (transaction.Status == PaymentTransactionStatus.Successful &&
+                    payment != null &&
+                    payment.Status == PaymentStatus.Completed &&
+                    payment.State == PaymentState.Approved)
+                    return new ApiResponse<bool> { Success = true, Message = "Payment already processed and approved.", Data = true };
+
+                if (payment == null)
+                    return new ApiResponse<bool> { Success = false, Message = "Payment record not found for this transaction." };
 
                 if (payment.PaymentSource != PaymentSource.Online)
                     return new ApiResponse<bool> { Success = false, Message = "This payment is not an online payment." };
 
                 if (verification.Success && string.Equals(verification.Status, "success", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (verification.Amount > 0 && Math.Abs(verification.Amount - payment.TotalAmount) > 0.01m)
+                    if (verification.Amount > 0 && Math.Abs(verification.Amount - transaction.Amount) > 0.01m)
                     {
+                        transaction.Status = PaymentTransactionStatus.Failed;
+                        transaction.UpdatedAt = DateTime.UtcNow;
+                        transaction.FailReason = $"Amount mismatch: paid ₦{verification.Amount:N2} but expected ₦{transaction.Amount:N2}.";
                         payment.Status = PaymentStatus.Failed;
                         payment.VerificationStatus = PaymentVerificationStatus.Failed;
                         payment.State = PaymentState.Cancelled;
                         payment.UpdatedAt = DateTime.UtcNow;
                         await _context.SaveChangesAsync();
-                        return new ApiResponse<bool> { Success = false, Message = $"Amount mismatch: paid ₦{verification.Amount:N2} but expected ₦{payment.TotalAmount:N2}." };
+                        return new ApiResponse<bool> { Success = false, Message = $"Amount mismatch: paid ₦{verification.Amount:N2} but expected ₦{transaction.Amount:N2}." };
                     }
 
+                    // Source of truth: verified success from Paystack updates transaction & payment
+                    transaction.Status = PaymentTransactionStatus.Successful;
+                    transaction.ProviderTransactionId = verification.ProviderTransactionId;
+                    transaction.PaidAt = verification.PaidAt ?? DateTime.UtcNow;
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    transaction.FailReason = null;
+
                     payment.Status = PaymentStatus.Completed;
-                    payment.VerificationStatus = PaymentVerificationStatus.Successful;
-                    payment.State = PaymentState.Pending;
+                    payment.VerificationStatus = PaymentVerificationStatus.Verified;
+                    payment.State = PaymentState.Approved;
+                    payment.Reference = transaction.Reference;
+                    payment.PaystackReference = transaction.Reference;
+                    payment.VerifiedBy = !string.IsNullOrWhiteSpace(verifiedBy) ? verifiedBy : "Paystack (Online Auto-Verified)";
+                    payment.VerifiedAt = DateTime.UtcNow;
                     if (verification.PaidAt.HasValue)
                         payment.PaymentDate = verification.PaidAt.Value;
                     payment.UpdatedAt = DateTime.UtcNow;
                 }
                 else
                 {
+                    transaction.Status = PaymentTransactionStatus.Failed;
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    transaction.FailReason = $"Provider reported status '{verification.Status}'.";
+
                     payment.Status = PaymentStatus.Failed;
                     payment.VerificationStatus = PaymentVerificationStatus.Failed;
                     payment.State = PaymentState.Cancelled;
@@ -1323,7 +1413,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 }
 
                 await _context.SaveChangesAsync();
-                return new ApiResponse<bool> { Success = true, Message = "Payment updated from Paystack.", Data = true };
+                return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
             }
             catch (Exception ex)
             {
@@ -1335,27 +1425,32 @@ namespace UpgradedSchoolManagementDataAccess.Services
         {
             try
             {
-                var payment = await _context.StudentPayments
-                    .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
+                var transaction = await _context.PaymentTransactions
+                    .Include(t => t.StudentPayment)
+                    .FirstOrDefaultAsync(t => t.Reference == reference);
+
+                var payment = transaction?.StudentPayment;
+                if (payment == null)
+                {
+                    // Legacy rows carry the reference on the payment itself.
+                    payment = await _context.StudentPayments
+                        .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
+                }
+
                 if (payment == null)
                     return new ApiResponse<bool> { Success = false, Message = "Payment not found for this reference." };
 
                 if (payment.PaymentSource != PaymentSource.Online)
                     return new ApiResponse<bool> { Success = false, Message = "This is not an online payment." };
 
-                // Already finalized — nothing more to do
-                if (payment.Status != PaymentStatus.Pending)
-                    return new ApiResponse<bool> { Success = true, Message = "Payment already confirmed.", Data = true };
-
-                var verification = await _paystackService.VerifyAsync(reference);
-                var result = await ApplyPaystackVerificationAsync(reference, verification);
-
-                if (result.Success && !string.IsNullOrWhiteSpace(confirmedBy) && payment.Status == PaymentStatus.Completed)
+                if (!string.IsNullOrWhiteSpace(confirmedBy))
                 {
                     payment.RecordedBy = confirmedBy;
-                    payment.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
                 }
+
+                // Verify directly with Paystack API endpoint
+                var verification = await _paystackService.VerifyAsync(reference);
+                var result = await ApplyPaystackVerificationAsync(reference, verification, confirmedBy);
 
                 return result;
             }
@@ -1363,6 +1458,158 @@ namespace UpgradedSchoolManagementDataAccess.Services
             {
                 return new ApiResponse<bool> { Success = false, Message = $"Error confirming online payment: {ex.Message}" };
             }
+        }
+
+        public async Task<ApiResponse<bool>> CancelOnlinePaymentAsync(string reference, string? cancelledBy)
+        {
+            try
+            {
+                var transaction = await _context.PaymentTransactions
+                    .Include(t => t.StudentPayment)
+                    .FirstOrDefaultAsync(t => t.Reference == reference);
+
+                // Nothing to cancel
+                if (transaction == null || transaction.StudentPayment == null)
+                    return new ApiResponse<bool> { Success = true, Message = "No active payment attempt to cancel.", Data = true };
+
+                // Idempotent — never cancel a payment that was already confirmed successful
+                if (transaction.Status == PaymentTransactionStatus.Successful ||
+                    (transaction.StudentPayment.Status == PaymentStatus.Completed &&
+                     transaction.StudentPayment.State == PaymentState.Approved))
+                    return new ApiResponse<bool> { Success = true, Message = "This payment is already completed; it cannot be cancelled.", Data = true };
+
+                if (transaction.Status != PaymentTransactionStatus.Pending)
+                    return new ApiResponse<bool> { Success = true, Message = "This payment attempt is no longer active.", Data = true };
+
+                transaction.Status = PaymentTransactionStatus.Cancelled;
+                transaction.UpdatedAt = DateTime.UtcNow;
+                transaction.FailReason = "Cancelled by the student before the payment was completed.";
+                if (!string.IsNullOrWhiteSpace(cancelledBy))
+                    transaction.RecordedBy = cancelledBy;
+
+                // Leave the StudentPayment unpaid so the student can retry immediately.
+                transaction.StudentPayment.Status = PaymentStatus.Failed;
+                transaction.StudentPayment.VerificationStatus = PaymentVerificationStatus.Failed;
+                transaction.StudentPayment.State = PaymentState.Cancelled;
+                transaction.StudentPayment.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return new ApiResponse<bool> { Success = true, Message = "Payment attempt cancelled. You can try again.", Data = true };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<bool> { Success = false, Message = $"Error cancelling online payment: {ex.Message}" };
+            }
+        }
+
+        /// <summary>
+        /// Marks abandoned online payment attempts (still Pending beyond the attempt timeout)
+        /// as Expired and moves their StudentPayment out of the pending state.
+        /// </summary>
+        private async Task ExpireStaleOnlineAttemptsAsync(int termRegId, int? paymentItemId = null)
+        {
+            var cutoff = DateTime.UtcNow.AddMinutes(-OnlineAttemptTimeoutMinutes);
+
+            var staleAttemptsQuery = _context.PaymentTransactions
+                .Include(t => t.StudentPayment)
+                .Where(t => t.StudentPayment.TermRegId == termRegId &&
+                            t.Status == PaymentTransactionStatus.Pending &&
+                            t.CreatedAt < cutoff);
+
+            if (paymentItemId.HasValue)
+            {
+                staleAttemptsQuery = staleAttemptsQuery
+                    .Where(t => t.StudentPayment.PaymentItems.Any(pi => pi.PaymentItemId == paymentItemId.Value));
+            }
+
+            var staleAttempts = await staleAttemptsQuery.ToListAsync();
+
+            foreach (var stale in staleAttempts)
+            {
+                stale.Status = PaymentTransactionStatus.Expired;
+                stale.UpdatedAt = DateTime.UtcNow;
+                stale.FailReason = "Abandoned (expired by timeout).";
+                if (stale.StudentPayment != null && stale.StudentPayment.Status == PaymentStatus.Pending)
+                {
+                    stale.StudentPayment.Status = PaymentStatus.Failed;
+                    stale.StudentPayment.State = PaymentState.Cancelled;
+                    stale.StudentPayment.VerificationStatus = PaymentVerificationStatus.Failed;
+                    stale.StudentPayment.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
+            if (staleAttempts.Count > 0)
+                await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Verification path for legacy online payments (reference stored on StudentPayment
+        /// directly). Mirrors the outcome into a PaymentTransaction so every payment — old and
+        /// new — ends up with a permanent attempt record.
+        /// </summary>
+        private async Task<ApiResponse<bool>> ApplyLegacyPaystackVerificationAsync(
+            string reference, PaystackVerificationResult verification, string? verifiedBy)
+        {
+            var payment = await _context.StudentPayments
+                .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
+            if (payment == null)
+                return new ApiResponse<bool> { Success = false, Message = "Payment not found for this reference." };
+
+            // Idempotency — if already completed and approved, return success immediately
+            if (payment.Status == PaymentStatus.Completed && payment.State == PaymentState.Approved)
+                return new ApiResponse<bool> { Success = true, Message = "Payment already processed and approved.", Data = true };
+
+            if (payment.PaymentSource != PaymentSource.Online)
+                return new ApiResponse<bool> { Success = false, Message = "This payment is not an online payment." };
+
+            var transaction = new PaymentTransaction
+            {
+                StudentPaymentId = payment.Id,
+                Reference = reference,
+                Amount = payment.TotalAmount,
+                Provider = PaymentProvider.Paystack,
+                Status = verification.Success && string.Equals(verification.Status, "success", StringComparison.OrdinalIgnoreCase)
+                    ? PaymentTransactionStatus.Successful
+                    : PaymentTransactionStatus.Failed,
+                ProviderTransactionId = verification.ProviderTransactionId,
+                PaidAt = verification.PaidAt,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Narration = "Legacy online payment (Paystack)"
+            };
+            _context.PaymentTransactions.Add(transaction);
+
+            if (verification.Success && string.Equals(verification.Status, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                if (verification.Amount > 0 && Math.Abs(verification.Amount - payment.TotalAmount) > 0.01m)
+                {
+                    payment.Status = PaymentStatus.Failed;
+                    payment.VerificationStatus = PaymentVerificationStatus.Failed;
+                    payment.State = PaymentState.Cancelled;
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                    return new ApiResponse<bool> { Success = false, Message = $"Amount mismatch: paid ₦{verification.Amount:N2} but expected ₦{payment.TotalAmount:N2}." };
+                }
+
+                payment.Status = PaymentStatus.Completed;
+                payment.VerificationStatus = PaymentVerificationStatus.Verified;
+                payment.State = PaymentState.Approved;
+                payment.VerifiedBy = !string.IsNullOrWhiteSpace(verifiedBy) ? verifiedBy : "Paystack (Online Auto-Verified)";
+                payment.VerifiedAt = DateTime.UtcNow;
+                if (verification.PaidAt.HasValue)
+                    payment.PaymentDate = verification.PaidAt.Value;
+                payment.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                payment.Status = PaymentStatus.Failed;
+                payment.VerificationStatus = PaymentVerificationStatus.Failed;
+                payment.State = PaymentState.Cancelled;
+                payment.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+            return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
         }
 
         public async Task<ApiResponse<bool>> VerifyOnlinePaymentAsync(int paymentId, string? verifiedBy)
@@ -1451,7 +1698,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     .Select(p => new OnlinePaymentListRowDto
                     {
                         PaymentId = p.Id,
-                        Reference = p.Reference,
+                        Reference = p.Reference ?? "",
                         StudentName = p.TermRegistration.StudentsTable.FullName,
                         AdmissionNo = p.TermRegistration.StudentsTable.ApplicationUser.UserName,
                         ClassName = p.TermRegistration.SchoolClasses.Name,
@@ -1490,20 +1737,73 @@ namespace UpgradedSchoolManagementDataAccess.Services
         }
 
         /// <summary>
-        /// Admission numbers are used as the account email, but Paystack requires a
-        /// real email shape, so we derive a stable synthetic address from it.
+        /// Generates a payment reference server-side that is guaranteed to be unique across
+        /// ALL existing payment records — including failed, cancelled, and reversed ones.
+        /// Every payment request therefore gets its own distinct Paystack transaction
+        /// reference, so a reference is never reused for another payment attempt.
         /// </summary>
-        private static string NormalizeEmailForPaystack(string? source)
+        private async Task<string> GenerateUniquePaymentReferenceAsync()
         {
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                var reference = SD.GenerateUniqueNumber();
+                var existsInPayments = await _context.StudentPayments
+                    .AnyAsync(p => p.Reference == reference || p.PaystackReference == reference);
+                var existsInTransactions = await _context.PaymentTransactions
+                    .AnyAsync(t => t.Reference == reference);
+                if (!existsInPayments && !existsInTransactions)
+                    return reference;
+            }
+
+            throw new Exception("Unable to generate a unique payment reference. Please try again.");
+        }
+
+        /// <summary>
+        /// Validates student email address for Paystack transactions. Uses actual email if valid,
+        /// otherwise derives a stable synthetic email address with a valid public TLD (.com instead of .local).
+        /// </summary>
+        private static string NormalizeEmailForPaystack(string? userEmail, string? username)
+        {
+            if (IsValidEmail(userEmail))
+                return userEmail!.Trim();
+
+            if (IsValidEmail(username))
+                return username!.Trim();
+
+            var source = !string.IsNullOrWhiteSpace(userEmail) ? userEmail : username;
             if (string.IsNullOrWhiteSpace(source))
-                return "student@schoolpay.local";
+                return "student@schoolpay.com";
 
             var normalized = new string(source
                 .Where(char.IsLetterOrDigit)
                 .ToArray());
             return string.IsNullOrEmpty(normalized)
-                ? "student@schoolpay.local"
-                : $"{normalized.ToLowerInvariant()}@student.schoolpay.local";
+                ? "student@schoolpay.com"
+                : $"{normalized.ToLowerInvariant()}@student.schoolpay.com";
+        }
+
+        private static bool IsValidEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email.Trim());
+                var parts = addr.Host.Split('.');
+                if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[^1]) || parts[^1].Length < 2)
+                    return false;
+
+                var host = addr.Host.ToLowerInvariant();
+                if (host.EndsWith(".local") || host.EndsWith(".localhost") || host.EndsWith(".test") || host.EndsWith(".internal") || host.EndsWith(".lan"))
+                    return false;
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

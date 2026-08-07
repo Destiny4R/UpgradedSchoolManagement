@@ -379,8 +379,8 @@
             if (!skills.length) return '<p class="text-muted small">No active skills in this domain.</p>';
             return skills.map(s => `
                 <div class="form-check">
-                    <input class="form-check-input skill-checkbox" type="checkbox" value="${s.id}" ${assignedIds.has(s.id) ? 'checked' : ''} />
-                    <label class="form-check-label">${s.name}</label>
+                    <input class="form-check-input skill-checkbox" type="checkbox" id="skill_${s.id}" value="${s.id}" ${assignedIds.has(s.id) ? 'checked' : ''} />
+                    <label class="form-check-label" for="skill_${s.id}">${s.name}</label>
                 </div>`).join('');
         }
 

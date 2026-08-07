@@ -169,25 +169,25 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Student.View")]
         public async Task<IActionResult> GetTermRegistrations([FromBody] TermRegDataTablesRequest request)
         {
-            var searchTerm    = request.Search?.Value ?? "";
-            var sortCol       = request.Order?.FirstOrDefault()?.Column ?? 0;
-            var sortDir       = request.Order?.FirstOrDefault()?.Dir    ?? "asc";
+            var searchTerm = request.Search?.Value ?? "";
+            var sortCol = request.Order?.FirstOrDefault()?.Column ?? 0;
+            var sortDir = request.Order?.FirstOrDefault()?.Dir ?? "asc";
 
             var (data, total, filtered) = await _termRegistrationServices.GetStudentTermRegistrationAsync(
-                skip:          request.Start,
-                pageSize:      request.Length,
-                searchTerm:    searchTerm,
-                sortColumn:    sortCol,
+                skip: request.Start,
+                pageSize: request.Length,
+                searchTerm: searchTerm,
+                sortColumn: sortCol,
                 sortDirection: sortDir,
-                termFilter:    request.TermFilter,
+                termFilter: request.TermFilter,
                 sessionFilter: request.SessionFilter,
-                classFilter:   request.ClassFilter,
+                classFilter: request.ClassFilter,
                 subclassFilter: request.SubclassFilter);
 
             return Json(new
             {
-                draw            = request.Draw,
-                recordsTotal    = total,
+                draw = request.Draw,
+                recordsTotal = total,
                 recordsFiltered = filtered,
                 data
             });
@@ -354,8 +354,7 @@ namespace UpgradedSchoolManagementWeb.Controllers
             if (student == null)
                 return Json(new { success = false, message = "Student record not found" });
 
-            var ownsReg = await _dbContext.TermRegistrations
-                .AnyAsync(tr => tr.Id == termRegId && tr.StudentId == student.Id);
+            var ownsReg = await _dbContext.TermRegistrations.AnyAsync(tr => tr.Id == termRegId && tr.StudentId == student.Id);
             if (!ownsReg)
                 return Json(new { success = false, message = "Registration not found." });
 
@@ -528,10 +527,10 @@ namespace UpgradedSchoolManagementWeb.Controllers
     /// </summary>
     public class TermRegDataTablesRequest : DataTablesRequest
     {
-        public int? TermFilter      { get; set; }
-        public int? SessionFilter   { get; set; }
-        public int? ClassFilter     { get; set; }
-        public int? SubclassFilter  { get; set; }
+        public int? TermFilter { get; set; }
+        public int? SessionFilter { get; set; }
+        public int? ClassFilter { get; set; }
+        public int? SubclassFilter { get; set; }
     }
 
     public class PaymentItemDataTablesRequest : DataTablesRequest

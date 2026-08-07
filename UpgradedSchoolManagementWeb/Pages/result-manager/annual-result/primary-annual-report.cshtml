@@ -33,13 +33,13 @@
             body {
                 font-family: 'Inter', sans-serif;
                 background: var(--mist);
-                color: #0d1b2a;
+                color: black;
                 font-size: 0.88rem;
             }
 
             /* ── Header ── */
             .page-header {
-                background: var(--navy);
+                background: var(--navya);
                 color: #fff;
                 border-bottom: 5px solid var(--gold);
             }
@@ -280,27 +280,29 @@
                         <span>🏫</span>
                     }
                 </div>
-                <div class="flex-grow-1">
+                <div class="flex-grow-1 text-dark">
                     <div class="school-title">@Model.Report.SchoolName</div>
                     <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;">@Model.Report.SchoolAddress &nbsp;|&nbsp; @Model.Report.SchoolPhone &nbsp;|&nbsp; @Model.Report.SchoolEmail</div>
+                    <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;">Motto: @SchoolConfig.Value.Motto</div>
                     <div class="report-badge mt-2">Annual Academic Report — Session @Model.Report.SessionName</div>
                 </div>
-                <div class="crest">
+                @* <div class="crest">
                     @if (!string.IsNullOrEmpty(Model.Report.SchoolLogoUrl))
                     {
                         <img src="@Model.Report.SchoolLogoUrl" alt="Logo" style="width:74px;height:74px;border-radius:50%;object-fit:cover;visibility:hidden;" />
+                        <img src="@Model.Report.PicturePath" alt="Student" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--goldn);" />
                     }
                     else
                     {
-                        <span>🏫</span>
+                        <i class="bi bi-person"></i>
                     }
-                </div>
+                </div> *@
             </div>
         </div>
         <div style="height:5px;background:var(--gold);border-radius:0 0 4px 4px;" class="mb-4"></div>
 
         <!-- ══ STUDENT INFO ══ -->
-        <div class="cw px-4 py-3 mb-3">
+        <div class="cw px-4 py-3 mb-2">
             <div class="row g-2 align-items-center">
                 <div class="col-auto">
                     @if (!string.IsNullOrEmpty(Model.Report.PicturePath))
@@ -325,7 +327,24 @@
         </div>
 
         <!-- ══ ANNUAL ATTENDANCE ══ -->
-        <div class="cw px-4 py-3 mb-3">
+        <div class="card mb-2">
+            <div class="p-1">
+                <table width="100%">
+                    <tbody>
+                        <tr>
+                            <td colspan="4"><div class="lbl mb-2">Annual Attendance</div></td>
+                        </tr>
+                        <tr>
+                            <td><div class="lbl">1st Term || <strong>@(Model.Report.Term1Present ?? 0)/@(Model.Report.Term1OutOf ?? 0)</strong></div></td>
+                            <td><div class="lbl">2nd Term || <strong>@(Model.Report.Term2Present ?? 0)/@(Model.Report.Term2OutOf ?? 0)</strong></div></td>
+                            <td><div class="lbl">3rd Term || <strong>@(Model.Report.Term3Present ?? 0)/@(Model.Report.Term3OutOf ?? 0)</strong></div></td>
+                            <td><div class="lbl">Annual || <strong>@Model.Report.AnnualPresent/@Model.Report.AnnualOutOf</strong></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @* <div class="cw px-4 py-3 mb-2">
             <div class="lbl mb-2">Annual Attendance</div>
             <div class="row g-2 text-center">
                 <div class="col-3" style="border-right:1px solid #eee;">
@@ -339,7 +358,7 @@
                 </div>
                 <div class="col-3"><div class="lbl">Annual || <strong>@Model.Report.AnnualPresent/@Model.Report.AnnualOutOf</strong></div></div>
             </div>
-        </div>
+        </div> *@
 
         <!-- ══ ANNUAL ACADEMIC RESULT TABLE ══ -->
         <div class="row">
@@ -347,7 +366,7 @@
                 <div class="cw mb-3">
                     <div class="px-4 pt-3"><div class="lbl mb-2">Annual Academic Performance @Model.Report.SessionName | 3 Terms | @Model.Report.ClassName</div></div>
                     <div class="px-3">
-                        <table class="table-sm tbl mb-0">
+                        <table class="table-sms mb-0">
                             <thead>
                                 <tr>
                                     <th rowspan="2" class="t-head-a" style="vertical-align:middle;width:22%;">Subject</th>
@@ -393,9 +412,9 @@
                 </div>
             </div>
             <div class="col-4 p-2 mt-1">
-                <div class="cw p-1">
+                <div class="cw p-2">
                     <div class="lbl mb-2">Psychomotor Assessment (Annual) Rating Scale(1 - 5)</div>
-                    <table class="table table-sm table-borderless mb-0" style="font-size:0.83rem;">
+                    <table width="100%">
                         <thead><tr><th></th><th class="text-center">1st</th><th class="text-center">2nd</th><th class="text-center">3rd</th></tr></thead>
                         <tbody>
                             @foreach (var skill in Model.Report.PsychomotorSkills)
@@ -413,7 +432,7 @@
 
                 <div class="cw p-2 mt-2">
                     <div class="lbl mb-2">Affective Domain (Annual) Rating Scale(1 - 5)</div>
-                    <table class="table table-sm table-borderless mb-0" style="font-size:0.83rem;">
+                    <table class="" width="100%">
                         <thead><tr><th></th><th class="text-center">1st</th><th class="text-center">2nd</th><th class="text-center">3rd</th></tr></thead>
                         <tbody>
                             @foreach (var skill in Model.Report.AffectiveDomain)
@@ -494,7 +513,10 @@
             </div>
         </div>
 
-        <p class="text-center text-muted" style="font-size:0.7rem;">This Annual Report is computer-generated. Falsification is a punishable offence. &copy; @DateTime.UtcNow.Year @Model.Report.SchoolName.</p>
+        <div class="d-flex justify-content-between">
+            <div>&copy; @DateTime.UtcNow.Year @Model.Report.SchoolName</div>
+            <div> Designed By: D-Best Return Tech <a class="text-decoration-none" href="tel:08039410863">08039410863</a></div>
+        </div>
     </div>
     }
     <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>

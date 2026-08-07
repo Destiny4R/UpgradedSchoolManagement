@@ -46,9 +46,11 @@ namespace UpgradedSchoolManagementDataAccess.Services
 
             var amountInKobo = (long)Math.Round(amount * 100m, 0, MidpointRounding.AwayFromZero);
 
+            var sanitizedEmail = SanitizePaystackEmail(email);
+
             var body = new Dictionary<string, object>
             {
-                ["email"] = email,
+                ["email"] = sanitizedEmail,
                 ["amount"] = amountInKobo,
                 ["reference"] = reference,
                 ["currency"] = "NGN",
@@ -116,6 +118,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     result.Status = data.TryGetProperty("status", out var status) ? status.GetString() : string.Empty;
                     result.Reference = data.TryGetProperty("reference", out var refEl) ? refEl.GetString() : reference;
                     result.Currency = data.TryGetProperty("currency", out var currency) ? currency.GetString() : "NGN";
+                    result.ProviderTransactionId = data.TryGetProperty("id", out var txId) ? txId.ToString() : null;
                     if (data.TryGetProperty("amount", out var amountEl) && amountEl.TryGetInt64(out var amountKobo))
                     {
                         result.Amount = amountKobo / 100m;
@@ -173,6 +176,35 @@ namespace UpgradedSchoolManagementDataAccess.Services
             var left = Encoding.UTF8.GetBytes(a);
             var right = Encoding.UTF8.GetBytes(b);
             return CryptographicOperations.FixedTimeEquals(left, right);
+        }
+
+        private static string SanitizePaystackEmail(string? email)
+        {
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var trimmed = email.Trim();
+                try
+                {
+                    var addr = new System.Net.Mail.MailAddress(trimmed);
+                    var host = addr.Host.ToLowerInvariant();
+                    var parts = host.Split('.');
+                    var isValidTld = parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[^1]) && parts[^1].Length >= 2;
+                    var isReservedLocalDomain = host.EndsWith(".local") || host.EndsWith(".localhost") || host.EndsWith(".test") || host.EndsWith(".internal") || host.EndsWith(".lan");
+
+                    if (isValidTld && !isReservedLocalDomain)
+                        return trimmed;
+                }
+                catch
+                {
+                    // Fallback below
+                }
+
+                var alphaNumeric = new string(trimmed.Where(char.IsLetterOrDigit).ToArray());
+                if (!string.IsNullOrEmpty(alphaNumeric))
+                    return $"{alphaNumeric.ToLowerInvariant()}@student.schoolpay.com";
+            }
+
+            return "student@schoolpay.com";
         }
     }
 }

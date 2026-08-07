@@ -590,7 +590,10 @@ var initial = string.IsNullOrWhiteSpace(Model.Report.StudentName) ? "S" : Model.
 			</div>
 		</div>
 
-		<p class="text-center text-muted" style="font-size:0.7rem;">This Annual Report is computer-generated and authentic without a separate stamp. Falsification is a criminal offence under Nigerian law. &copy; 2025 @Model.Report.SchoolName.</p>
+		<div class="d-flex justify-content-between">
+            <div>&copy; @DateTime.UtcNow.Year @Model.Report.SchoolName</div>
+            <div> Designed By: D-Best Return Tech <a class="text-decoration-none" href="tel:08039410863">08039410863</a></div>
+        </div>
 	</div>
 	}
 	<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>

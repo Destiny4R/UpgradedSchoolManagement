@@ -12,8 +12,8 @@ using UpgradedSchoolManagementDataAccess.Data;
 namespace UpgradedSchoolManagementDataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260618163738_WorkingOnEmployee")]
-    partial class WorkingOnEmployee
+    [Migration("20260807114943_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -163,8 +163,17 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("EnableOnlinePayment")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PaystackPublicKey")
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("PaystackSecretKey")
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PrincipalName")
                         .HasColumnType("nvarchar(100)");
@@ -714,6 +723,66 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.ToTable("PaymentSetups");
                 });
 
+            modelBuilder.Entity("UpgradedSchoolManagementModels.Models.PaymentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FailReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Narration")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("RecordedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StudentPaymentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.HasIndex("StudentPaymentId");
+
+                    b.ToTable("PaymentTransactions");
+                });
+
             modelBuilder.Entity("UpgradedSchoolManagementModels.Models.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -960,12 +1029,18 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("PaymentSource")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaystackReference")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
                     b.Property<string>("RecordedBy")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
                     b.Property<string>("Reference")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("RejectMessage")
@@ -986,6 +1061,16 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int>("VerificationStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("VerifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.HasKey("Id");
 
@@ -1559,6 +1644,17 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
                     b.Navigation("SesseionTable");
                 });
 
+            modelBuilder.Entity("UpgradedSchoolManagementModels.Models.PaymentTransaction", b =>
+                {
+                    b.HasOne("UpgradedSchoolManagementModels.Models.StudentPayment", "StudentPayment")
+                        .WithMany("PaymentTransactions")
+                        .HasForeignKey("StudentPaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("StudentPayment");
+                });
+
             modelBuilder.Entity("UpgradedSchoolManagementModels.Models.ResultTable", b =>
                 {
                     b.HasOne("UpgradedSchoolManagementModels.Models.SubjectTable", "Subject")
@@ -1806,6 +1902,8 @@ namespace UpgradedSchoolManagementDataAccess.Migrations
             modelBuilder.Entity("UpgradedSchoolManagementModels.Models.StudentPayment", b =>
                 {
                     b.Navigation("PaymentItems");
+
+                    b.Navigation("PaymentTransactions");
                 });
 
             modelBuilder.Entity("UpgradedSchoolManagementModels.Models.TermRegistration", b =>

@@ -1654,45 +1654,69 @@ table.dataTable {
     }
 
 /* ── Table theme ── */
-.table {
+.table,
+table {
+    --bs-table-bg: transparent !important;
+    --bs-table-accent-bg: transparent !important;
+    --bs-table-striped-bg: transparent !important;
+    --bs-table-hover-bg: var(--surface2) !important;
+    --bs-table-color: var(--text) !important;
     color: var(--text) !important;
-    border-color: var(--border) !important
+    border-color: var(--border) !important;
 }
 
-    .table thead th {
-        background: var(--surface) !important;
-        color: var(--muted) !important;
-        border-bottom-color: var(--border) !important
-    }
+.table > :not(caption) > * > *,
+.table tbody tr,
+.table tbody td,
+.table tbody th,
+.custom-table tbody tr,
+.custom-table tbody td {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border-bottom-color: var(--border) !important;
+}
 
-    .table tbody td {
-        border-bottom-color: var(--border) !important;
-        color: var(--text) !important
-    }
+.table thead th,
+.table thead td,
+.custom-table th {
+    background-color: var(--surface) !important;
+    color: var(--muted) !important;
+    border-bottom-color: var(--border) !important;
+}
 
-    .table tbody tr:hover td {
-        background: var(--surface2) !important
-    }
+.table tbody tr:hover > *,
+.table tbody tr:hover td,
+.table-hover > tbody > tr:hover > *,
+.custom-table tr:hover td {
+    background-color: var(--surface2) !important;
+    color: var(--text) !important;
+}
 
+.table-striped > tbody > tr:nth-of-type(odd) > *,
 .table-striped tbody tr:nth-of-type(odd) {
-    background: var(--surface) !important
+    background-color: var(--surface2) !important;
+    color: var(--text) !important;
 }
 
-    .table-striped tbody tr:nth-of-type(odd):hover td {
-        background: var(--surface2) !important
-    }
+.table-striped > tbody > tr:nth-of-type(odd):hover > *,
+.table-striped tbody tr:nth-of-type(odd):hover td {
+    background-color: var(--surface3) !important;
+    color: var(--text) !important;
+}
 
 .table-light,
+.table-light > th,
+.table-light > td,
 .thead-light {
-    background: var(--surface2) !important;
-    color: var(--text) !important
+    background-color: var(--surface2) !important;
+    color: var(--text) !important;
 }
 
     .table-light th,
     .thead-light th {
-        background: var(--surface) !important;
+        background-color: var(--surface) !important;
         color: var(--muted) !important;
-        border-bottom-color: var(--border) !important
+        border-bottom-color: var(--border) !important;
     }
 
 /* ── Generic form element overrides ── */
