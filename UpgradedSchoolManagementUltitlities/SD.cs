@@ -75,10 +75,10 @@ namespace UpgradedSchoolManagementUltitlities
         /// </summary>
         public static string GenerateUniqueNumber()
         {
-            var suffix = new char[10];
+            var suffix = new char[5];
             for (int i = 0; i < suffix.Length; i++)
                 suffix[i] = ReferenceAlphabet[RandomNumberGenerator.GetInt32(ReferenceAlphabet.Length)];
-            return $"{DateTime.UtcNow:yyyyMMddHHmmssfff}{new string(suffix)}";
+            return $"{DateTime.UtcNow:yyyyMMddHHmm}{new string(suffix)}";
         }
 
         public static (string Grade, string Remark) GetGradeAndRemark(decimal totalScore)

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using UpgradedSchoolManagementDataAccess.Data;
@@ -467,26 +468,32 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     : query.OrderBy(p => p.PaymentDate);
 
                 var rawData = await query
-                    .Skip(skip)
-                    .Take(pageSize)
-                    .Select(p => new
-                    {
-                        p.Id,
-                        p.TermRegId,
-                        StudentName = p.TermRegistration.StudentsTable.FullName,
-                        AdmissionNo = p.TermRegistration.StudentsTable.ApplicationUser.UserName ?? "N/A",
-                        ClassName = $"{p.TermRegistration.SchoolClasses.Name} - {p.TermRegistration.SubClassTable.Name}",
-                        SessionName = p.TermRegistration.SesseionTable.Name,
-                        p.TermRegistration.Term,
-                        p.TotalAmount,
-                        p.Reference,
-                        p.Status,
-                        p.State,
-                        p.PaymentSource,
-                        Fees = p.PaymentItems.SelectMany(pi => pi.PaymentItem.PaymentSetups).FirstOrDefault().Amount,
-                        PaymentDate = p.PaymentDate.ToString("dd/MM/yyyy hh:mm tt")
-                    })
-                    .ToListAsync();
+                .OrderByDescending(p => p.PaymentDate)
+                    .ThenBy(p => p.Id) // tie-breaker for deterministic paging
+                .Skip(skip)
+                .Take(pageSize)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.TermRegId,
+                    StudentName = p.TermRegistration.StudentsTable.FullName,
+                    AdmissionNo = p.TermRegistration.StudentsTable.ApplicationUser.UserName ?? "N/A",
+                    ClassName = p.TermRegistration.SchoolClasses.Name + " - " + p.TermRegistration.SubClassTable.Name,
+                    SessionName = p.TermRegistration.SesseionTable.Name,
+                    p.TermRegistration.Term,
+                    p.TotalAmount,
+                    p.Reference,
+                    p.Status,
+                    p.State,
+                    p.PaymentSource,
+                    Fees = _context.PaymentSetups
+                        .Where(m => m.Term == p.TermRegistration.Term
+                                 && m.SessionId == p.TermRegistration.SessionId
+                                 && m.SchoolClassId == p.TermRegistration.SchoolClassId)
+                        .Select(m => (decimal?)m.Amount)
+                        .FirstOrDefault() ?? 0,
+                    p.PaymentDate // keep as DateTime, format after materialization
+                }).ToListAsync();
 
                 var data = rawData.Select(p => new
                 {
@@ -503,7 +510,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     State = p.State.ToString(),
                     PaymentSource = p.PaymentSource.ToString(),
                     Fees = SD.ToNaira(p.Fees),
-                    p.PaymentDate
+                    PaymentDate = p.PaymentDate.ToString("dd/MM/yyyy hh:mm tt")
+                    //p.PaymentDate
                 }).ToList();
 
                 return (data.Cast<dynamic>().ToList(), recordsTotal, recordsFiltered);
@@ -1705,7 +1713,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                         Session = p.TermRegistration.SesseionTable.Name,
                         Term = p.TermRegistration.Term.ToString(),
                         TotalAmount = p.TotalAmount,
-                        PaymentDate = p.PaymentDate,
+                        PaymentDate = p.PaymentDate.ToString("dd/MM/yyyy hh:mm tt"),
                         Status = p.Status.ToString(),
                         State = p.State.ToString(),
                         VerificationStatus = p.VerificationStatus.ToString(),
@@ -1742,6 +1750,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
         /// Every payment request therefore gets its own distinct Paystack transaction
         /// reference, so a reference is never reused for another payment attempt.
         /// </summary>
+        ///
         private async Task<string> GenerateUniquePaymentReferenceAsync()
         {
             for (var attempt = 0; attempt < 10; attempt++)

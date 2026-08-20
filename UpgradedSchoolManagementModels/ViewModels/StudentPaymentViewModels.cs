@@ -434,7 +434,7 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public string Session { get; set; } = string.Empty;
         public string Term { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
-        public DateTime PaymentDate { get; set; }
+        public string PaymentDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
         public string VerificationStatus { get; set; } = string.Empty;

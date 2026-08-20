@@ -1059,6 +1059,9 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Finance.View")]
         public async Task<IActionResult> GetOnlinePayments([FromBody] OnlinePaymentsDataTablesRequest request)
         {
+            if (request == null)
+                return Json(new { draw = 0, recordsTotal = 0, recordsFiltered = 0, data = Array.Empty<object>() });
+
             var result = await _studentPaymentService.GetOnlinePaymentsPagedAsync(
                 request,
                 sessionFilter: request.SessionFilter,
@@ -1072,6 +1075,9 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Finance.PaymentApprove")]
         public async Task<IActionResult> VerifyOnlinePayment([FromBody] VerifyOnlinePaymentRequest request)
         {
+            if (request == null || request.PaymentId <= 0)
+                return Json(new { success = false, message = "Valid payment ID is required." });
+
             var username = User.Identity?.Name;
             var result = await _studentPaymentService.VerifyOnlinePaymentAsync(request.PaymentId, username);
 
@@ -1101,6 +1107,9 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Finance.View")]
         public async Task<IActionResult> LookupByItem([FromBody] PaymentItemLookupRequest request)
         {
+            if (request == null)
+                return Json(new { success = false, message = "Invalid lookup parameters." });
+
             var result = await _studentPaymentService.LookupByItemAsync(
                 request.SessionId, request.Term, request.PaymentItemId, request.AdmissionNo);
             return Json(new { success = result.Success, message = result.Message, data = result.Data });
@@ -1110,6 +1119,9 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Finance.PaymentRecord")]
         public async Task<IActionResult> CreateSingleItemPayment([FromBody] CreateSingleItemPaymentVM request)
         {
+            if (request == null)
+                return Json(new { success = false, message = "Invalid payment payload." });
+
             var username = User.Identity?.Name;
             var result = await _studentPaymentService.CreateSingleItemPaymentAsync(request, username);
             return Json(new { success = result.Success, message = result.Message, data = result.Data });
@@ -1119,6 +1131,9 @@ namespace UpgradedSchoolManagementWeb.Controllers
         [Authorize(Policy = "Finance.InvoiceEdit")]
         public async Task<IActionResult> UpdatePaymentAmount([FromBody] UpdatePaymentAmountVM request)
         {
+            if (request == null)
+                return Json(new { success = false, message = "Invalid update payload." });
+
             var username = User.Identity?.Name;
             var result = await _studentPaymentService.UpdatePaymentAmountAsync(request, username);
             return Json(new { success = result.Success, message = result.Message });
