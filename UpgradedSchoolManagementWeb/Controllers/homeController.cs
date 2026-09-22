@@ -313,6 +313,7 @@ namespace UpgradedSchoolManagementWeb.Controllers
                 data
             });
         }
+
         [HttpPost]
         [Authorize(Policy = "Settings.View")]
         public async Task<IActionResult> GetTermGeneralInformations([FromBody] DataTablesRequest request)
@@ -328,6 +329,7 @@ namespace UpgradedSchoolManagementWeb.Controllers
             var result = await _classTermInfoService.GetClassTermInformations(request);
             return Json(result);
         }
+
         // ════════════════════════════════════════════════════════════
         // STUDENT-FACING ENDPOINTS (for student dashboard/profile/payment pages)
         // ════════════════════════════════════════════════════════════
@@ -347,19 +349,33 @@ namespace UpgradedSchoolManagementWeb.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Student")]
-        public async Task<IActionResult> GetMyPendingPayments(long termRegId)
+        public async Task<IActionResult> GetMyPendingPayments(long? termRegId = null)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             var student = await _studentService.GetStudentByUserId(userId);
             if (student == null)
                 return Json(new { success = false, message = "Student record not found" });
 
-            var ownsReg = await _dbContext.TermRegistrations.AnyAsync(tr => tr.Id == termRegId && tr.StudentId == student.Id);
+            if (!termRegId.HasValue || termRegId.Value <= 0)
+            {
+                var latestReg = await _dbContext.TermRegistrations
+                    .Where(tr => tr.StudentId == student.Id)
+                    .OrderByDescending(tr => tr.SessionId)
+                    .ThenByDescending(tr => tr.Term)
+                    .FirstOrDefaultAsync();
+
+                if (latestReg == null)
+                    return Json(new { success = false, message = "No term registration found." });
+
+                termRegId = latestReg.Id;
+            }
+
+            var ownsReg = await _dbContext.TermRegistrations.AnyAsync(tr => tr.Id == termRegId.Value && tr.StudentId == student.Id);
             if (!ownsReg)
                 return Json(new { success = false, message = "Registration not found." });
 
-            var items = await _studentPaymentService.GetPendingPaymentsAsync((int)termRegId);
-            return Json(new { success = true, termRegId, data = items });
+            var items = await _studentPaymentService.GetPendingPaymentsAsync((int)termRegId.Value);
+            return Json(new { success = true, termRegId = termRegId.Value, data = items });
         }
 
         [HttpPost]
@@ -419,7 +435,7 @@ namespace UpgradedSchoolManagementWeb.Controllers
                         phone2 = p.Phone2,
                         address = p.Address
                     }),
-                    currentRegistration = regs.OrderByDescending(r => r.Session).ThenByDescending(r => r.Term).FirstOrDefault()
+                    currentRegistration = regs.OrderByDescending(r => r.SessionId).FirstOrDefault() ?? regs.FirstOrDefault()
                 }
             });
         }
@@ -442,7 +458,7 @@ namespace UpgradedSchoolManagementWeb.Controllers
                 {
                     studentName = student.FullName,
                     studentPicture = student.PicturePath,
-                    currentRegistration = regs.OrderByDescending(r => r.Session).ThenByDescending(r => r.Term).FirstOrDefault(),
+                    currentRegistration = regs.OrderByDescending(r => r.SessionId).FirstOrDefault() ?? regs.FirstOrDefault(),
                     totalRegistrations = regs.Count,
                     allRegistrations = regs
                 }

@@ -265,38 +265,38 @@
     }
     else
     {
-    <div class="container py-3" style="max-width:100%;">
+    <div class="container py-" style="max-width:100%;">
 
         <!-- ══ HEADER ══ -->
         <div class="page-header px-4 py-4 rounded-top-3 mb-0">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <div class="crest">
-                    @if (!string.IsNullOrEmpty(Model.Report.SchoolLogoUrl))
-                    {
-                        <img src="@Model.Report.SchoolLogoUrl" alt="Logo" style="width:74px;height:74px;border-radius:50%;object-fit:cover;" />
-                    }
-                    else
-                    {
-                        <span>🏫</span>
-                    }
+
+            <div class="row text-dark">
+                <div class="col-2">
+                        @if (!string.IsNullOrEmpty(Model.Report.SchoolLogoUrl))
+                        {
+                            <img src="@Model.Report.SchoolLogoUrl" alt="Logo" style="width:100px;height:100px;border-radius:50%;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <span>🏫</span>
+                        }
                 </div>
-                <div class="flex-grow-1 text-dark">
-                    <div class="school-title">@Model.Report.SchoolName</div>
-                    <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;">@Model.Report.SchoolAddress &nbsp;|&nbsp; @Model.Report.SchoolPhone &nbsp;|&nbsp; @Model.Report.SchoolEmail</div>
-                    <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;">Motto: @SchoolConfig.Value.Motto</div>
-                    <div class="report-badge mt-2">Annual Academic Report — Session @Model.Report.SessionName</div>
+                <div class="col-8 text-center">
+                        <div class="school-title">@Model.Report.SchoolName</div>
+                        <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;" class="h6">@Model.Report.SchoolAddress &nbsp;|&nbsp; @Model.Report.SchoolPhone &nbsp;|&nbsp; @Model.Report.SchoolEmail</div>
+                        <div style="font-size:0.79rem;opacity:0.7;margin-top:2px;" class="h6">Motto: @SchoolConfig.Value.Motto</div>
+                        <div class="report-badge mt-2">Annual Academic Report — Session @Model.Report.SessionName</div>
                 </div>
-                @* <div class="crest">
-                    @if (!string.IsNullOrEmpty(Model.Report.SchoolLogoUrl))
-                    {
-                        <img src="@Model.Report.SchoolLogoUrl" alt="Logo" style="width:74px;height:74px;border-radius:50%;object-fit:cover;visibility:hidden;" />
-                        <img src="@Model.Report.PicturePath" alt="Student" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--goldn);" />
-                    }
-                    else
-                    {
-                        <i class="bi bi-person"></i>
-                    }
-                </div> *@
+                <div class="col-2">
+                        @if (!string.IsNullOrEmpty(Model.Report.PicturePath))
+                        {
+                            <img src="@Model.Report.PicturePath" alt="Student" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);" />
+                        }
+                        else
+                        {
+                            <div style="width:56px;height:56px;background:#eef2f8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--navy);font-weight:800;">@initial</div>
+                        }
+                </div>
             </div>
         </div>
         <div style="height:5px;background:var(--gold);border-radius:0 0 4px 4px;" class="mb-4"></div>
@@ -304,16 +304,6 @@
         <!-- ══ STUDENT INFO ══ -->
         <div class="cw px-4 py-3 mb-2">
             <div class="row g-2 align-items-center">
-                <div class="col-auto">
-                    @if (!string.IsNullOrEmpty(Model.Report.PicturePath))
-                    {
-                        <img src="@Model.Report.PicturePath" alt="Student" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);" />
-                    }
-                    else
-                    {
-                        <div style="width:56px;height:56px;background:#eef2f8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--navy);font-weight:800;">@initial</div>
-                    }
-                </div>
                 <div class="col">
                     <div class="row g-2">
                         <div class="col-sm-5"><div class="lbl">Full Name</div><div class="val text-uppercase">@Model.Report.StudentName</div></div>
@@ -407,9 +397,35 @@
                     <div class="row text-center">
                         <div class="col-6"><strong>Annual Total / Grand Average</strong></div>
                         <div class="col-3 text-center"><span style="font-size:1.1rem;font-weight:800;">@Model.Report.GrandTotal / @Model.Report.OverallAverage%</span></div>
-                        <div class="col-3 text-center"><span class="gp @Gc(Model.Report.OverallGrade)">@Model.Report.OverallPosition out of @Model.Report.TotalStudents</span></div>
+                        <div class="col-3 text-center"><span class="gp @Gc(Model.Report.OverallGrade)">Position: @Model.Report.OverallPosition out of @Model.Report.TotalStudents</span></div>
                     </div>
                 </div>
+                    <div class="cw px-4 py-3 mb-1">
+                        <div class="lbl mb-3">Academic Progress Across Terms</div>
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">1st Term</div>
+                                    <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term1Avg ?? 0)%;background:var(--navy);">@(Model.Report.Term1Avg.HasValue ? $"{Model.Report.Term1Avg:0.0}%" : "0%")</div></div>
+                                    <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term1OverallPos</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">2nd Term</div>
+                                    <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term2Avg ?? 0)%;background:var(--jade);">@(Model.Report.Term2Avg.HasValue ? $"{Model.Report.Term2Avg:0.0}%" : "0%")</div></div>
+                                    <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term2OverallPos</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="row align-items-center">
+                                    <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">3rd Term</div>
+                                    <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term3Avg ?? 0)%;background:var(--rose);">@(Model.Report.Term3Avg.HasValue ? $"{Model.Report.Term3Avg:0.0}%" : "0%")</div></div>
+                                    <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term3OverallPos</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
             </div>
             <div class="col-4 p-2 mt-1">
                 <div class="cw p-2">
@@ -450,34 +466,6 @@
             </div>
         </div>
 
-        <!-- ══ TERM PROGRESS BARS ══ -->
-        <div class="cw px-4 py-3 mb-1">
-            <div class="lbl mb-3">Academic Progress Across Terms</div>
-            <div class="row">
-                <div class="col-4">
-                    <div class="row align-items-center mb-2">
-                        <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">1st Term</div>
-                        <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term1Avg ?? 0)%;background:var(--navy);">@(Model.Report.Term1Avg.HasValue ? $"{Model.Report.Term1Avg:0.0}%" : "0%")</div></div>
-                        <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term1OverallPos</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="row align-items-center mb-2">
-                        <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">2nd Term</div>
-                        <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term2Avg ?? 0)%;background:var(--jade);">@(Model.Report.Term2Avg.HasValue ? $"{Model.Report.Term2Avg:0.0}%" : "0%")</div></div>
-                        <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term2OverallPos</div>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="row align-items-center">
-                        <div class="col-3" style="font-size:0.8rem;font-weight:600;text-align:right;padding-right:10px;">3rd Term</div>
-                        <div class="col-6"><div class="tc-bar" style="width:@(Model.Report.Term3Avg ?? 0)%;background:var(--rose);">@(Model.Report.Term3Avg.HasValue ? $"{Model.Report.Term3Avg:0.0}%" : "0%")</div></div>
-                        <div class="col-3 text-end" style="font-size:0.8rem;font-weight:700;color:#666;">Pos: @Model.Report.Term3OverallPos</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- ══ REMARKS ══ -->
         <div class="cw px-4 py-3 mb-1">
             <div class="lbl mb-1">Annual Remarks</div>
@@ -488,7 +476,14 @@
                 </div>
                 <div class="col-md-6">
                     <div>@Model.Report.PrincipalRemark</div>
-                    <div class="mt-1"><div class="sig-name">@Model.Report.PrincipalName</div><div class="sig-bar"></div><div style="font-size:0.7rem;color:#888;">Head Teacher</div></div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="mt-1"><div class="sig-name">@Model.Report.PrincipalName</div><div class="sig-bar"></div><div style="font-size:0.7rem;color:#888;">Head Teacher</div></div>
+                        </div>
+                        <div class="col-4">
+                            <img src="@Model.Report.PrincipalSignature" width="80px" height="70px" />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

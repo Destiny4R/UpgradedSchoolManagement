@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace UpgradedSchoolManagementModels.Models
 {
@@ -6,6 +6,7 @@ namespace UpgradedSchoolManagementModels.Models
     {
         public string FullName { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        public bool IsSystemUser { get; set; } = false;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
         public long? SchoolId { get; set; }

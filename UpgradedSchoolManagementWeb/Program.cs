@@ -115,6 +115,21 @@ using (var scope = app.Services.CreateScope())
 
     await context.Database.EnsureCreatedAsync();
 
+    try
+    {
+        var colCheck = await context.Database.SqlQueryRaw<int>(
+            "SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'AspNetUsers' AND COLUMN_NAME = 'IsSystemUser'").FirstOrDefaultAsync();
+        if (colCheck == 0)
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE `AspNetUsers` ADD `IsSystemUser` tinyint(1) NOT NULL DEFAULT 0;");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Schema check/migration notice: {ex.Message}");
+    }
+
     await PermissionSeeder.SeedAsync(context);
     await RoleSeeder.SeedAsync(context);
     await RolePermissionSeeder.SeedAsync(context);

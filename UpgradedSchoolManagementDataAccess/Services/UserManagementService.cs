@@ -71,6 +71,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     StaffId = user.StaffId,
                     CreatedDate = user.CreatedDate,
                     LastLoginDate = user.LastLoginDate,
+                    IsSystemUser = user.IsSystemUser,
                     Emp = employee?.Id??0,
                     Roles = roles.ToList()
                 });
@@ -129,6 +130,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             if (user == null)
                 return new ApiResponse<object> { Success = false, Message = "User not found" };
 
+            if (user.IsSystemUser)
+                return new ApiResponse<object> { Success = false, Message = "System user cannot be edited" };
+
             user.FullName = fullName;
             user.IsActive = isActive;
             user.UpdatedDate = DateTime.UtcNow;
@@ -148,6 +152,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
 
             if (await _userManager.IsInRoleAsync(user, "SuperAdmin"))
                 return new ApiResponse<object> { Success = false, Message = "SuperAdmin users cannot be deleted" };
+
+            if (user.IsSystemUser)
+                return new ApiResponse<object> { Success = false, Message = "System user cannot be deleted" };
 
             var claims = await _userManager.GetClaimsAsync(user);
             foreach (var claim in claims)
@@ -186,6 +193,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             if (user == null)
                 return new ApiResponse<object> { Success = false, Message = "User not found" };
 
+            if (user.IsSystemUser)
+                return new ApiResponse<object> { Success = false, Message = "System user role assignments cannot be changed" };
+
             var currentRoles = await _userManager.GetRolesAsync(user);
             foreach (var role in currentRoles)
             {
@@ -221,6 +231,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
                 return new ApiResponse<object> { Success = false, Message = "User not found" };
+
+            if (user.IsSystemUser)
+                return new ApiResponse<object> { Success = false, Message = "System user password cannot be reset from this interface" };
 
             if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
                 return new ApiResponse<object> { Success = false, Message = "Password must be at least 6 characters" };

@@ -6,7 +6,7 @@ using UpgradedSchoolManagementDataAccess.IServices;
 
 namespace UpgradedSchoolManagementWeb.Pages.student
 {
-    [Authorize]
+    [Authorize(Roles = "Student")]
     public class payment_callbackModel : PageModel
     {
         private readonly IStudentPaymentService _studentPaymentService;

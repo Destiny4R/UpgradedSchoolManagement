@@ -232,6 +232,10 @@ namespace UpgradedSchoolManagementDataAccess.Data
 
                 entity.Property(pt => pt.ProviderTransactionId)
                     .HasMaxLength(120);
+
+                entity.Property(pt => pt.RowVersion)
+                    .IsRowVersion()
+                    .IsConcurrencyToken();
             });
 
             modelBuilder.Entity<ClassResultSkill>()

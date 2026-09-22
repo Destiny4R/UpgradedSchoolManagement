@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace UpgradedSchoolManagementWeb.Pages.student
 {
-    [Authorize]
+    [Authorize(Roles = "Student")]
     public class payment_historyModel : PageModel
     {
         public void OnGet()

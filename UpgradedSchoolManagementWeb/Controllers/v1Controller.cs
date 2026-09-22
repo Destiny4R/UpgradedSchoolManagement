@@ -35,31 +35,31 @@ namespace UpgradedSchoolManagementWeb.Controllers
         private readonly IClassTermInformationService _classTermInfoService;
         private readonly IRoleService _roleService;
         private readonly IUserManagementService _userManagementService;
-    private readonly IAuditLogService _auditLogService;
-    private readonly IEmployeeService _employeeService;
+        private readonly IAuditLogService _auditLogService;
+        private readonly IEmployeeService _employeeService;
 
-    public V1Controller(
-        IUnitOfWork unitOfWork,
-        ISessionService sessionService,
-        IClassService classService,
-        ISubClassService subClassService,
-        ISubjectService subjectService,
-        IStudentService studentService,
-        IParentGuardianService parentGuardianService,
-        ITermRegistrationServices termRegistrationServices,
-        SignInManager<ApplicationUser> signInManager,
-        IWebHostEnvironment env,
-        IPaymentCategoryService paymentCategoryService,
-        IPaymentItemService paymentItemService,
-        IPaymentSetupService paymentSetupService,
-        IStudentPaymentService studentPaymentService,
-        IPaymentReportService paymentReportService,
-        ITermGeneralInformationService termGeneralInfoService,
-        IClassTermInformationService classTermInfoService,
-        IRoleService roleService,
-        IUserManagementService userManagementService,
-        IAuditLogService auditLogService,
-        IEmployeeService employeeService)
+        public V1Controller(
+            IUnitOfWork unitOfWork,
+            ISessionService sessionService,
+            IClassService classService,
+            ISubClassService subClassService,
+            ISubjectService subjectService,
+            IStudentService studentService,
+            IParentGuardianService parentGuardianService,
+            ITermRegistrationServices termRegistrationServices,
+            SignInManager<ApplicationUser> signInManager,
+            IWebHostEnvironment env,
+            IPaymentCategoryService paymentCategoryService,
+            IPaymentItemService paymentItemService,
+            IPaymentSetupService paymentSetupService,
+            IStudentPaymentService studentPaymentService,
+            IPaymentReportService paymentReportService,
+            ITermGeneralInformationService termGeneralInfoService,
+            IClassTermInformationService classTermInfoService,
+            IRoleService roleService,
+            IUserManagementService userManagementService,
+            IAuditLogService auditLogService,
+            IEmployeeService employeeService)
         {
             _unitOfWork = unitOfWork;
             _sessionService = sessionService;
@@ -361,17 +361,17 @@ namespace UpgradedSchoolManagementWeb.Controllers
 
             var input = new CreateStudentInput
             {
-                FirstName   = request.FirstName,
-                Surname     = request.Surname,
-                OtherName   = request.OtherName,
-                Gender      = request.Gender,
+                FirstName = request.FirstName,
+                Surname = request.Surname,
+                OtherName = request.OtherName,
+                Gender = request.Gender,
                 DateOfBirth = request.DateOfBirth,
                 Nationality = request.Nationality,
-                State       = request.State,
-                LocalGov    = request.LocalGov,
-                Address     = request.Address,
+                State = request.State,
+                LocalGov = request.LocalGov,
+                Address = request.Address,
                 PicturePath = request.PicturePath,
-                Password    = request.Password
+                Password = request.Password
             };
             var result = await _studentService.CreateStudent(input);
             return Json(result);
@@ -386,16 +386,16 @@ namespace UpgradedSchoolManagementWeb.Controllers
 
             var input = new UpdateStudentInput
             {
-                Id          = request.Id,
-                FirstName   = request.FirstName,
-                Surname     = request.Surname,
-                OtherName   = request.OtherName,
-                Gender      = request.Gender,
+                Id = request.Id,
+                FirstName = request.FirstName,
+                Surname = request.Surname,
+                OtherName = request.OtherName,
+                Gender = request.Gender,
                 DateOfBirth = request.DateOfBirth,
                 Nationality = request.Nationality,
-                State       = request.State,
-                LocalGov    = request.LocalGov,
-                Address     = request.Address,
+                State = request.State,
+                LocalGov = request.LocalGov,
+                Address = request.Address,
                 PicturePath = request.PicturePath
             };
             var result = await _studentService.UpdateStudent(input);
@@ -546,16 +546,16 @@ namespace UpgradedSchoolManagementWeb.Controllers
             }
 
             var result = await _termRegistrationServices.BatchRegisterStudentsAsync(
-                regNumbers, 
-                request.SchoolClassId, 
-                request.SessionId, 
-                request.SubClassId, 
-                (Term)request.Term, 
+                regNumbers,
+                request.SchoolClassId,
+                request.SessionId,
+                request.SubClassId,
+                (Term)request.Term,
                 subjectIds);
 
-            return Json(new 
-            { 
-                success = result.Success, 
+            return Json(new
+            {
+                success = result.Success,
                 message = result.Message,
                 totalProcessed = result.TotalProcessed,
                 successCount = result.SuccessCount,
@@ -584,15 +584,15 @@ namespace UpgradedSchoolManagementWeb.Controllers
                 return Json(new { success = false, message = "Target Session, Class, and Sub Class are required." });
 
             var result = await _termRegistrationServices.BatchPromoteStudentsAsync(
-                request.TermRegIds, 
-                request.SchoolClassId, 
-                request.SessionId, 
-                request.SubClassId, 
+                request.TermRegIds,
+                request.SchoolClassId,
+                request.SessionId,
+                request.SubClassId,
                 (Term)request.Term);
 
-            return Json(new 
-            { 
-                success = result.Success, 
+            return Json(new
+            {
+                success = result.Success,
                 message = result.Message,
                 totalProcessed = result.TotalProcessed,
                 successCount = result.SuccessCount,

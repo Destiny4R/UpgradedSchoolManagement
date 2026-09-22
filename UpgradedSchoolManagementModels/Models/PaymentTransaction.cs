@@ -55,5 +55,14 @@ namespace UpgradedSchoolManagementModels.Models
         /// <summary>Human-readable reason when the attempt failed, was cancelled, or expired.</summary>
         [StringLength(500)]
         public string? FailReason { get; set; }
+
+        /// <summary>
+        /// Optimistic concurrency token. EF Core uses this to detect concurrent
+        /// modifications — if two threads both read a Pending transaction and try
+        /// to mark it Successful, exactly one SaveChangesAsync succeeds and the
+        /// other throws DbUpdateConcurrencyException.
+        /// </summary>
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
     }
 }

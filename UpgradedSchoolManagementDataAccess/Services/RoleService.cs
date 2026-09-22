@@ -52,6 +52,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 .Take(request.Length)
                 .ToListAsync();
 
+            var systemRoles = new[] { "SuperAdmin", "Student", "Teacher", "Accountant", "Principal", "SchoolAdmin", "Parent" };
             var data = new List<RoleListDto>();
             foreach (var role in roles)
             {
@@ -62,6 +63,7 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     Name = role.Name ?? "",
                     Description = role.Description,
                     IsActive = role.IsActive,
+                    IsSystem = systemRoles.Contains(role.Name),
                     UserCount = userCount,
                     CreatedDate = role.CreatedDate
                 });
@@ -109,8 +111,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             if (role == null)
                 return new ApiResponse<object> { Success = false, Message = "Role not found" };
 
-            if (role.Name == "SuperAdmin")
-                return new ApiResponse<object> { Success = false, Message = "SuperAdmin role cannot be edited" };
+            var protectedRoles = new[] { "SuperAdmin", "Student", "Teacher", "Accountant", "Principal", "SchoolAdmin", "Parent" };
+            if (protectedRoles.Contains(role.Name))
+                return new ApiResponse<object> { Success = false, Message = $"The '{role.Name}' role is a system role and cannot be edited" };
 
             var duplicate = await _roleManager.FindByNameAsync(name);
             if (duplicate != null && duplicate.Id != id)
@@ -133,8 +136,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             if (role == null)
                 return new ApiResponse<object> { Success = false, Message = "Role not found" };
 
-            if (role.Name == "SuperAdmin")
-                return new ApiResponse<object> { Success = false, Message = "SuperAdmin role cannot be deleted" };
+            var protectedRoles = new[] { "SuperAdmin", "Student", "Teacher", "Accountant", "Principal", "SchoolAdmin", "Parent" };
+            if (protectedRoles.Contains(role.Name))
+                return new ApiResponse<object> { Success = false, Message = $"The '{role.Name}' role is a system role and cannot be deleted" };
 
             var userCount = await _context.UserRoles.CountAsync(ur => ur.RoleId == id);
             if (userCount > 0)
@@ -184,6 +188,9 @@ namespace UpgradedSchoolManagementDataAccess.Services
             var role = await _roleManager.FindByIdAsync(roleId);
             if (role == null)
                 return new ApiResponse<object> { Success = false, Message = "Role not found" };
+
+            if (role.Name == "SuperAdmin")
+                return new ApiResponse<object> { Success = false, Message = "SuperAdmin role permissions cannot be altered" };
 
             var existing = await _context.RolePermissions.Where(rp => rp.RoleId == roleId).ToListAsync();
             _context.RolePermissions.RemoveRange(existing);

@@ -208,7 +208,8 @@
             }
 
             <!-- ── ATTENDANCE ── -->
-            @if (await HasPermission("Student.View"))
+            @*(await HasPermission("Student.View"))*@
+            @if (User.IsInRole("Student"))
             {
                 <div class="nav-section-label">Attendance</div>
                 <div class="nav-item">

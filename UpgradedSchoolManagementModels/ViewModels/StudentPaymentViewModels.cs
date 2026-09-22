@@ -380,6 +380,7 @@ namespace UpgradedSchoolManagementModels.ViewModels
         public decimal AlreadyPaid { get; set; }
         public decimal Remaining => ExpectedAmount - AlreadyPaid;
         public bool IsFullyPaid => Remaining <= 0;
+        public bool IsCompulsory { get; set; } = true;
         /// <summary>True when an online payment for this item is awaiting Paystack confirmation.</summary>
         public bool HasPendingOnlinePayment { get; set; }
     }

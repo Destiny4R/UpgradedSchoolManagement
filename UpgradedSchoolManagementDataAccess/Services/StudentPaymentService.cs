@@ -1166,8 +1166,8 @@ namespace UpgradedSchoolManagementDataAccess.Services
                           && ps.SchoolClassId == termReg.SchoolClassId
                           && ps.IsActive
                           && ps.PaymentItem.IsActive
-                          && ps.PaymentItem.PaymentCategory.IsActive)
-                .OrderBy(ps => ps.PaymentItem.PaymentCategory.Name)
+                          && (ps.PaymentItem.PaymentCategory == null || ps.PaymentItem.PaymentCategory.IsActive))
+                .OrderBy(ps => ps.PaymentItem.PaymentCategory != null ? ps.PaymentItem.PaymentCategory.Name : "")
                 .ThenBy(ps => ps.PaymentItem.Name)
                 .ToListAsync();
 
@@ -1186,10 +1186,11 @@ namespace UpgradedSchoolManagementDataAccess.Services
             {
                 PaymentItemId = ps.PaymentItemId,
                 ItemName = ps.PaymentItem.Name,
-                CategoryName = ps.PaymentItem.PaymentCategory?.Name ?? "Unknown",
+                CategoryName = ps.PaymentItem.PaymentCategory?.Name ?? "General",
                 ExpectedAmount = ps.Amount,
                 AlreadyPaid = alreadyPaidAmounts.ContainsKey(ps.PaymentItemId)
                     ? alreadyPaidAmounts[ps.PaymentItemId] : 0,
+                IsCompulsory = ps.IsCompulsory,
                 HasPendingOnlinePayment = false
             }).ToList();
         }
@@ -1420,8 +1421,28 @@ namespace UpgradedSchoolManagementDataAccess.Services
                     payment.UpdatedAt = DateTime.UtcNow;
                 }
 
-                await _context.SaveChangesAsync();
-                return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // Concurrency conflict: another thread (e.g. concurrent webhook/callback) updated the transaction.
+                    var reloadedTx = await _context.PaymentTransactions
+                        .Include(t => t.StudentPayment)
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Reference == reference);
+
+                    if (reloadedTx != null && reloadedTx.Status == PaymentTransactionStatus.Successful &&
+                        reloadedTx.StudentPayment != null && reloadedTx.StudentPayment.Status == PaymentStatus.Completed &&
+                        reloadedTx.StudentPayment.State == PaymentState.Approved)
+                    {
+                        return new ApiResponse<bool> { Success = true, Message = "Payment already processed and approved.", Data = true };
+                    }
+
+                    return new ApiResponse<bool> { Success = false, Message = "A concurrent modification occurred while updating this payment." };
+                }
             }
             catch (Exception ex)
             {
@@ -1433,27 +1454,17 @@ namespace UpgradedSchoolManagementDataAccess.Services
         {
             try
             {
-                var transaction = await _context.PaymentTransactions
+                // Fast-path idempotency check before making external Paystack API call
+                var existingTx = await _context.PaymentTransactions
                     .Include(t => t.StudentPayment)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.Reference == reference);
 
-                var payment = transaction?.StudentPayment;
-                if (payment == null)
+                if (existingTx != null && existingTx.Status == PaymentTransactionStatus.Successful &&
+                    existingTx.StudentPayment != null && existingTx.StudentPayment.Status == PaymentStatus.Completed &&
+                    existingTx.StudentPayment.State == PaymentState.Approved)
                 {
-                    // Legacy rows carry the reference on the payment itself.
-                    payment = await _context.StudentPayments
-                        .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
-                }
-
-                if (payment == null)
-                    return new ApiResponse<bool> { Success = false, Message = "Payment not found for this reference." };
-
-                if (payment.PaymentSource != PaymentSource.Online)
-                    return new ApiResponse<bool> { Success = false, Message = "This is not an online payment." };
-
-                if (!string.IsNullOrWhiteSpace(confirmedBy))
-                {
-                    payment.RecordedBy = confirmedBy;
+                    return new ApiResponse<bool> { Success = true, Message = "Payment already processed and approved.", Data = true };
                 }
 
                 // Verify directly with Paystack API endpoint
@@ -1501,8 +1512,23 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 transaction.StudentPayment.State = PaymentState.Cancelled;
                 transaction.StudentPayment.UpdatedAt = DateTime.UtcNow;
 
-                await _context.SaveChangesAsync();
-                return new ApiResponse<bool> { Success = true, Message = "Payment attempt cancelled. You can try again.", Data = true };
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return new ApiResponse<bool> { Success = true, Message = "Payment attempt cancelled. You can try again.", Data = true };
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    var reloaded = await _context.PaymentTransactions
+                        .Include(t => t.StudentPayment)
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Reference == reference);
+
+                    if (reloaded != null && reloaded.Status == PaymentTransactionStatus.Successful)
+                        return new ApiResponse<bool> { Success = true, Message = "This payment is already completed; it cannot be cancelled.", Data = true };
+
+                    return new ApiResponse<bool> { Success = true, Message = "This payment attempt is no longer active.", Data = true };
+                }
             }
             catch (Exception ex)
             {
@@ -1558,6 +1584,14 @@ namespace UpgradedSchoolManagementDataAccess.Services
         private async Task<ApiResponse<bool>> ApplyLegacyPaystackVerificationAsync(
             string reference, PaystackVerificationResult verification, string? verifiedBy)
         {
+            // First check if another concurrent thread already created a PaymentTransaction for this reference
+            var existingTx = await _context.PaymentTransactions
+                .Include(t => t.StudentPayment)
+                .FirstOrDefaultAsync(t => t.Reference == reference);
+
+            if (existingTx != null)
+                return await ApplyPaystackVerificationAsync(reference, verification, verifiedBy);
+
             var payment = await _context.StudentPayments
                 .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
             if (payment == null)
@@ -1616,8 +1650,22 @@ namespace UpgradedSchoolManagementDataAccess.Services
                 payment.UpdatedAt = DateTime.UtcNow;
             }
 
-            await _context.SaveChangesAsync();
-            return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
+            try
+            {
+                await _context.SaveChangesAsync();
+                return new ApiResponse<bool> { Success = true, Message = "Payment verified and updated successfully from Paystack.", Data = true };
+            }
+            catch (Exception)
+            {
+                var check = await _context.StudentPayments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Reference == reference || p.PaystackReference == reference);
+
+                if (check != null && check.Status == PaymentStatus.Completed && check.State == PaymentState.Approved)
+                    return new ApiResponse<bool> { Success = true, Message = "Payment already processed and approved.", Data = true };
+
+                throw;
+            }
         }
 
         public async Task<ApiResponse<bool>> VerifyOnlinePaymentAsync(int paymentId, string? verifiedBy)

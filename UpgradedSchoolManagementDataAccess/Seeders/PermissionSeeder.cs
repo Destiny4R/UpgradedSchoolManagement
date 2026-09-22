@@ -357,6 +357,7 @@ namespace UpgradedSchoolManagementDataAccess.Seeders
                     EmailConfirmed = true,
                     FullName = "System Administrator",
                     IsActive = true,
+                    IsSystemUser = true,
                     CreatedDate = DateTime.UtcNow
                 };
 
@@ -383,6 +384,11 @@ namespace UpgradedSchoolManagementDataAccess.Seeders
                         await _context.SaveChangesAsync();
                     }
                 }
+            }
+            else if (!adminUser.IsSystemUser)
+            {
+                adminUser.IsSystemUser = true;
+                await userManager.UpdateAsync(adminUser);
             }
         }
     }

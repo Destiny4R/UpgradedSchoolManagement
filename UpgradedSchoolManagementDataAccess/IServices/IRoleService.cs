@@ -20,6 +20,7 @@ namespace UpgradedSchoolManagementDataAccess.IServices
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsActive { get; set; }
+        public bool IsSystem { get; set; }
         public int UserCount { get; set; }
         public DateTime CreatedDate { get; set; }
     }

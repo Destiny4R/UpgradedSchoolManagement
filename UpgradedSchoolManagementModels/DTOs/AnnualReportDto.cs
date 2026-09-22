@@ -43,6 +43,7 @@ namespace UpgradedSchoolManagementModels.DTOs
         public string FormTeacherName { get; set; } = string.Empty;
         public string PrincipalRemark { get; set; } = string.Empty;
         public string PrincipalName { get; set; } = string.Empty;
+        public string PrincipalSignature { get; set; } = string.Empty;
         public string PromotedToClass { get; set; } = string.Empty;
         public int Age { get; set; }
     }

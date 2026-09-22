@@ -21,6 +21,7 @@ namespace UpgradedSchoolManagementDataAccess.IServices
         public string? Email { get; set; }
         public string FullName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsSystemUser { get; set; }
         public string? StaffId { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? LastLoginDate { get; set; }

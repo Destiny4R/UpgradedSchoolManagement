@@ -43,6 +43,8 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager.annual_result
 
         public decimal TotalOutstanding { get; set; }
 
+        string signature;
+
         public async Task OnGet()
         {
             if (StudentId > 0 && SessionId > 0 && ClassId > 0 && SubClassId > 0)
@@ -72,6 +74,7 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager.annual_result
                 }
 
                 Report = await _annualReportService.BuildAsync(StudentId, SessionId, ClassId, SubClassId);
+                Report.PrincipalSignature = signature;
             }
         }
 
@@ -91,6 +94,8 @@ namespace UpgradedSchoolManagementWeb.Pages.result_manager.annual_result
                 .ToListAsync();
 
             var enrolledTerms = termRegs.Select(tr => tr.Term).Distinct().ToList();
+
+            signature = adminSettings.PrincipalSignature;
 
             var compulsorySetups = await _db.PaymentSetups
                 .Include(ps => ps.PaymentItem)
