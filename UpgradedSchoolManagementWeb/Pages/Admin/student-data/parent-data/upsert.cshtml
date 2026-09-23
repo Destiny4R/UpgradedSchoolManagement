@@ -8,6 +8,61 @@
     <link href="~/lib/sweetalert2/sweetalert2.min.css" rel="stylesheet" />
 }
 
+@section Head {
+    <style>
+        /* Linked-student banner must keep its gradient in both themes.
+           NOTE: _Layout renders Sheets BEFORE site.css, so page styles there
+           lose to `.card { background: var(--surface) !important; }`.
+           Head renders AFTER site.css, and the doubled `.card.` selector
+           raises specificity so the gradient always wins. */
+        div.card.linked-student-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+            background-color: #4f46e5 !important;
+            border: none !important;
+            border-radius: 12px !important;
+        }
+        div.card.linked-student-card .card-body {
+            background: transparent !important;
+        }
+        div.card.linked-student-card .linked-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2) !important;
+            color: #fff !important;
+        }
+        div.card.linked-student-card .linked-eyebrow {
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            font-size: .7rem;
+            color: rgba(255,255,255,0.9) !important;
+        }
+        div.card.linked-student-card .linked-name {
+            color: #fff !important;
+        }
+        div.card.linked-student-card .linked-badge {
+            background: #fff !important;
+            background-color: #fff !important;
+            color: #4f46e5 !important;
+            border-radius: 6px;
+            font-size: .78rem;
+        }
+        div.card.linked-student-card #clearStudentBtn {
+            background: #fff !important;
+            background-color: #fff !important;
+            color: #4f46e5 !important;
+            border: 1px solid #fff !important;
+            border-radius: 8px !important;
+            font-weight: 600;
+        }
+        div.card.linked-student-card #clearStudentBtn:hover {
+            background: #eef0ff !important;
+            background-color: #eef0ff !important;
+            color: #4338ca !important;
+            border-color: #eef0ff !important;
+        }
+    </style>
+}
+
 <div class="mgmt-page">
 
     <div class="mgmt-header fade-in">
@@ -61,23 +116,20 @@
 
                 @* Linked Student Info Card (shown only in Add mode after search) *@
                 <div id="linkedStudentSection" class="@(Model.IsEdit ? "d-none" : "") mb-4">
-                    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, var(--accent, #4f46e5) 0%, var(--accent2, #7c3aed) 100%); border-radius: 12px;">
+                    <div class="card border-0 shadow-sm linked-student-card">
                         <div class="card-body py-3 px-4">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                     style="width:48px;height:48px;background:rgba(255,255,255,0.2);">
-                                    <i class="bi bi-person-vcard-fill fs-4 text-white"></i>
+                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 linked-icon">
+                                    <i class="bi bi-person-vcard-fill fs-4"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div class="text-white opacity-75 small mb-1" style="letter-spacing:.05em;text-transform:uppercase;font-size:.7rem;">Linking Parent/Guardian to Student</div>
+                                    <div class="small mb-1 linked-eyebrow">Linking Parent/Guardian to Student</div>
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="fw-bold text-white fs-6" id="linkedStudentName">—</span>
-                                        <span class="badge text-white px-2 py-1" id="linkedStudentAdmission"
-                                              style="background:rgba(255,255,255,0.25);border-radius:6px;font-size:.78rem;">—</span>
+                                        <span class="fw-bold fs-6 linked-name" id="linkedStudentName">—</span>
+                                        <span class="badge px-2 py-1 linked-badge" id="linkedStudentAdmission">—</span>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm ms-auto" id="clearStudentBtn"
-                                        style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;">
+                                <button type="button" class="btn btn-sm ms-auto" id="clearStudentBtn">
                                     <i class="bi bi-arrow-repeat me-1"></i> Change Student
                                 </button>
                             </div>
